@@ -4,6 +4,24 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 
+
+# ==================================================================================================
+# DISPLAY FALLBACK FOR VS CODE / TERMINAL
+# ==================================================================================================
+# Jupyter has display() built in. A normal .py script in VS Code does not.
+# This fallback makes all existing display(...) calls work when running Sales_Reporting.py.
+try:
+    from IPython.display import display
+except ImportError:
+    def display(obj):
+        if isinstance(obj, pd.DataFrame):
+            if obj.empty:
+                print("(empty table)")
+            else:
+                print(obj.to_string(index=False))
+        else:
+            print(obj)
+
 # ==================================================================================================
 # SETTINGS
 # ==================================================================================================
@@ -12,8 +30,8 @@ BASE_FOLDER = Path(
     r"C:\Users\Natnael.Tesfagiorgis\OneDrive - Swinkels\Desktop\python\Backup Shared Folder"
 )
 
-E_FOLDER = Path(
-    r"C:\Users\Natnael.Tesfagiorgis\OneDrive - Swinkels\Desktop\python\Backup Shared Folder"
+EXTRACTION_FOLDER = Path(
+    r"C:\Users\Natnael.Tesfagiorgis\OneDrive - Swinkels\Desktop\python\Sales-Reoprt"
 )
 
 HL_PER_CRATE = 0.0792
@@ -2010,6 +2028,36 @@ stock_ab = (
     .reset_index()
 )
 
+# ==================================================================================================
+# STOCK SOURCE CHECKER
+# ==================================================================================================
+# This prints exactly what the Python is reading from Stock.xlsx.
+# Use this to compare with the manual stock total in the source file.
+print("=" * 120)
+print("STOCK SOURCE CHECKER")
+print("=" * 120)
+print("Stock file used:", files["stock"])
+print("Stock sheet used:", sheets["stock"])
+print("Latest stock date used:", latest_stock_date.date() if pd.notna(latest_stock_date) else latest_stock_date)
+print("Stock ID columns kept:", stock_id_cols)
+print("Stock columns treated as brand stock:", stock_value_cols)
+print("Raw latest stock rows:", stock_work.shape[0])
+print("Unpivoted non-zero stock rows:", stock_long.shape[0])
+print("Beginning stock total read by Python:", f"{stock_long['Beginning_Stock'].sum():,.2f}")
+
+stock_column_check = (
+    stock_long
+    .groupby("Stock Brand Raw", dropna=False)
+    .agg(Beginning_Stock=("Beginning_Stock", "sum"))
+    .reset_index()
+    .sort_values("Beginning_Stock", ascending=False)
+)
+
+print("=" * 120)
+print("STOCK TOTAL BY SOURCE COLUMN")
+print("=" * 120)
+display(stock_column_check)
+
 
 # ==================================================================================================
 # 7. DEPLETION: MTD AND YTD BY AGENT + BRAND
@@ -2208,7 +2256,456 @@ volume_cols_crates = [
     "Full Year Target Sales",
 ]
 
+
 final_kpi_wide = ensure_numeric_columns(final_kpi_wide, volume_cols_crates)
+
+
+# ==================================================================================================
+# 9B. LAST DAY + WTD PERIOD METRICS FOR DASHBOARD CARDS
+# Boss feedback update:
+#   - Shipment cards: Last Day, WTD, MTD, YTD
+#   - Depletion cards: Last Day, WTD, MTD, YTD
+#   - WTD starts on Monday
+#   - Each period needs vs Target and growth vs PY in the final dashboard extract
+# ==================================================================================================
+
+# Use the latest date that actually has positive shipment volume.
+# This avoids Last Day/WTD becoming zero when the shipment file contains future dates,
+# blank dates, or rows with zero quantity.
+shipment_positive_dates = actual_ab.loc[
+    pd.to_numeric(actual_ab["Actual Shipment Crates"], errors="coerce").fillna(0) > 0,
+    "Shipment Date"
+].dropna()
+
+if shipment_positive_dates.empty:
+    REPORT_LAST_SHIPMENT_DATE = LAST_SHIPMENT_DATE.normalize()
+else:
+    REPORT_LAST_SHIPMENT_DATE = pd.to_datetime(shipment_positive_dates.max()).normalize()
+
+CURRENT_WEEK_START = (REPORT_LAST_SHIPMENT_DATE - pd.Timedelta(days=int(REPORT_LAST_SHIPMENT_DATE.weekday()))).normalize()
+PY_LAST_DAY_DATE = (REPORT_LAST_SHIPMENT_DATE - pd.DateOffset(years=1)).normalize()
+PY_WEEK_START = (CURRENT_WEEK_START - pd.DateOffset(years=1)).normalize()
+PY_PERIOD_CUTOFF_DATE = PY_LAST_DAY_DATE
+
+print("=" * 120)
+print("LAST DAY + WTD PERIOD CHECK")
+print("=" * 120)
+print("Original max shipment date:", LAST_SHIPMENT_DATE.date())
+print("Report last shipment date with positive volume:", REPORT_LAST_SHIPMENT_DATE.date())
+print("Current week start Monday:", CURRENT_WEEK_START.date())
+print("PY last day date:", PY_LAST_DAY_DATE.date())
+print("PY week start:", PY_WEEK_START.date())
+
+print("=" * 120)
+print("SHIPMENT DATE RANGE CHECK")
+print("=" * 120)
+print("Actual shipment positive rows:", int((pd.to_numeric(actual_ab["Actual Shipment Crates"], errors="coerce").fillna(0) > 0).sum()))
+print("Actual shipment min date:", pd.to_datetime(actual_ab["Shipment Date"], errors="coerce").min())
+print("Actual shipment max date:", pd.to_datetime(actual_ab["Shipment Date"], errors="coerce").max())
+print("Actual shipment last-day rows:", int(pd.to_datetime(actual_ab["Shipment Date"], errors="coerce").dt.normalize().eq(REPORT_LAST_SHIPMENT_DATE).sum()))
+print("Actual shipment WTD rows:", int(pd.to_datetime(actual_ab["Shipment Date"], errors="coerce").dt.normalize().between(CURRENT_WEEK_START, REPORT_LAST_SHIPMENT_DATE).sum()))
+
+
+def period_metric(df, date_col, value_col, start_date, end_date, output_col):
+    """
+    Aggregates one metric by Agent Key + Brand KPI Key for a period.
+
+    Important fix:
+    - Dates are normalized to midnight before filtering.
+    - This prevents Last Day from returning zero because of hidden time values in Excel dates.
+    """
+    if df is None or df.empty:
+        return pd.DataFrame(columns=["Agent Key", "Brand KPI Key", output_col])
+
+    work = df.copy()
+    start_date = pd.to_datetime(start_date).normalize()
+    end_date = pd.to_datetime(end_date).normalize()
+
+    work["__PeriodDate__"] = pd.to_datetime(
+        work[date_col],
+        errors="coerce",
+        dayfirst=True
+    ).dt.normalize()
+
+    work = work[
+        work["__PeriodDate__"].between(start_date, end_date)
+    ].copy()
+
+    if work.empty:
+        return pd.DataFrame(columns=["Agent Key", "Brand KPI Key", output_col])
+
+    work[value_col] = pd.to_numeric(work[value_col], errors="coerce").fillna(0)
+
+    return (
+        work
+        .groupby(["Agent Key", "Brand KPI Key"], dropna=False)
+        .agg(**{output_col: (value_col, "sum")})
+        .reset_index()
+    )
+
+
+# --------------------------------------------------------------------------------------------------
+# Shipment: Last Day and WTD
+# --------------------------------------------------------------------------------------------------
+
+last_day_actual_ab = period_metric(
+    actual_ab,
+    "Shipment Date",
+    "Actual Shipment Crates",
+    REPORT_LAST_SHIPMENT_DATE,
+    REPORT_LAST_SHIPMENT_DATE,
+    "Last_Day_Shipment"
+)
+
+wtd_actual_ab = period_metric(
+    actual_ab,
+    "Shipment Date",
+    "Actual Shipment Crates",
+    CURRENT_WEEK_START,
+    REPORT_LAST_SHIPMENT_DATE,
+    "WTD_Shipment"
+)
+
+last_day_py_ab = period_metric(
+    py_ab,
+    "PY Shipment Date",
+    "PY Shipment Crates",
+    PY_LAST_DAY_DATE,
+    PY_LAST_DAY_DATE,
+    "Last_Day_PY_Shipment"
+)
+
+wtd_py_ab = period_metric(
+    py_ab,
+    "PY Shipment Date",
+    "PY Shipment Crates",
+    PY_WEEK_START,
+    PY_PERIOD_CUTOFF_DATE,
+    "WTD_PY_Shipment"
+)
+
+
+# --------------------------------------------------------------------------------------------------
+# Depletion PY preparation + Last Day/WTD/MTD/YTD PY Depletion
+# --------------------------------------------------------------------------------------------------
+
+py_depletion_work = fact_py_depletion.copy()
+py_depletion_work = clean_columns(py_depletion_work)
+
+py_depletion_date_col = find_col(
+    py_depletion_work,
+    ["Date", "Billing Date", "Depletion Date", "Posting Date", "Invoice Date"],
+    "fact_py_depletion"
+)
+
+py_depletion_agent_col = find_col(
+    py_depletion_work,
+    ["Sales Unit", "Agent", "Sold-to Name", "Customer Name", "Customer"],
+    "fact_py_depletion"
+)
+
+py_depletion_brand_col = find_col(
+    py_depletion_work,
+    ["Brand H+HK", "Product", "Item Description", "Brand", "Material Description"],
+    "fact_py_depletion"
+)
+
+py_depletion_dv_col = None
+for col in ["DV", "Division", "Region"]:
+    if col in py_depletion_work.columns:
+        py_depletion_dv_col = col
+        break
+
+py_depletion_hl_col = None
+for col in ["Dep HL", "Depletion HL", "Depletion, HL", "Volume HL", "HL"]:
+    if col in py_depletion_work.columns:
+        py_depletion_hl_col = col
+        break
+
+py_depletion_crates_col = None
+if py_depletion_hl_col is None:
+    for col in ["Sales", "Depletion", "Depletion Crates", "Invoiced Quantity", "Quantity", "Qty", "Crates", "Dep.", "Dep Crates"]:
+        if col in py_depletion_work.columns:
+            py_depletion_crates_col = col
+            break
+
+if py_depletion_crates_col is None and py_depletion_hl_col is None:
+    raise KeyError(
+        "No PY depletion volume column found. "
+        f"Available PY depletion columns: {list(py_depletion_work.columns)}"
+    )
+
+print("=" * 120)
+print("PY DEPLETION COLUMN CHECK")
+print("=" * 120)
+print("PY depletion volume column used:", py_depletion_hl_col if py_depletion_hl_col is not None else py_depletion_crates_col)
+
+py_depletion_work[py_depletion_date_col] = pd.to_datetime(
+    py_depletion_work[py_depletion_date_col],
+    errors="coerce",
+    dayfirst=True
+)
+
+py_depletion_work = py_depletion_work[
+    py_depletion_work[py_depletion_date_col].notna()
+].copy()
+
+py_depletion_work["PY Depletion Date"] = py_depletion_work[py_depletion_date_col]
+py_depletion_work["Original Brand"] = py_depletion_work[py_depletion_brand_col]
+py_depletion_work["Brand KPI Key"] = py_depletion_work["Original Brand"].apply(brand_kpi_key)
+
+py_depletion_work = add_agent_division_fields(
+    py_depletion_work,
+    agent_col=py_depletion_agent_col,
+    dv_col=py_depletion_dv_col
+)
+
+if py_depletion_hl_col is not None:
+    py_depletion_work["PY_Depletion_HL"] = to_number(py_depletion_work[py_depletion_hl_col])
+    py_depletion_work["PY_Depletion_Crates"] = py_depletion_work["PY_Depletion_HL"] / HL_PER_CRATE
+else:
+    py_depletion_work["PY_Depletion_Crates"] = to_number(py_depletion_work[py_depletion_crates_col])
+    py_depletion_work["PY_Depletion_HL"] = py_depletion_work["PY_Depletion_Crates"] * HL_PER_CRATE
+
+last_day_depletion_ab = period_metric(
+    depletion_work,
+    "Depletion Date",
+    "Depletion_Crates",
+    REPORT_LAST_SHIPMENT_DATE,
+    REPORT_LAST_SHIPMENT_DATE,
+    "Last_Day_Depletion"
+)
+
+wtd_depletion_ab = period_metric(
+    depletion_work,
+    "Depletion Date",
+    "Depletion_Crates",
+    CURRENT_WEEK_START,
+    REPORT_LAST_SHIPMENT_DATE,
+    "WTD_Depletion"
+)
+
+last_day_py_depletion_ab = period_metric(
+    py_depletion_work,
+    "PY Depletion Date",
+    "PY_Depletion_Crates",
+    PY_LAST_DAY_DATE,
+    PY_LAST_DAY_DATE,
+    "Last_Day_PY_Depletion"
+)
+
+wtd_py_depletion_ab = period_metric(
+    py_depletion_work,
+    "PY Depletion Date",
+    "PY_Depletion_Crates",
+    PY_WEEK_START,
+    PY_PERIOD_CUTOFF_DATE,
+    "WTD_PY_Depletion"
+)
+
+mtd_py_depletion_ab = period_metric(
+    py_depletion_work,
+    "PY Depletion Date",
+    "PY_Depletion_Crates",
+    PY_MONTH_START,
+    PY_PERIOD_CUTOFF_DATE,
+    "MTD_PY_Depletion"
+)
+
+ytd_py_depletion_ab = period_metric(
+    py_depletion_work,
+    "PY Depletion Date",
+    "PY_Depletion_Crates",
+    PY_YEAR_START,
+    PY_PERIOD_CUTOFF_DATE,
+    "YTD_PY_Depletion"
+)
+
+
+# --------------------------------------------------------------------------------------------------
+# Target: Last Day and WTD phasing by working days, Monday-based WTD
+# --------------------------------------------------------------------------------------------------
+
+def period_target_pivot(report_start, report_end, prefix):
+    """Builds target pivot for any period using Calendar MDM working-day phasing."""
+    period_calendar = calendar_work[
+        (calendar_work[calendar_date_col] >= report_start) &
+        (calendar_work[calendar_date_col] <= report_end) &
+        (calendar_work["Is Working Day"])
+    ].copy()
+
+    if period_calendar.empty:
+        period_working_days = pd.DataFrame(columns=["Month Start", "Period_Working_Days"])
+    else:
+        period_working_days = (
+            period_calendar
+            .groupby("Month Start", dropna=False)
+            .agg(Period_Working_Days=("Is Working Day", "sum"))
+            .reset_index()
+        )
+
+    target_period = target_ab.copy()
+
+    if "Month_Working_Days" not in target_period.columns:
+        target_period = target_period.merge(
+            month_working_days[["Month Start", "Month_Working_Days"]],
+            how="left",
+            on="Month Start"
+        )
+
+    target_period = target_period.merge(
+        period_working_days,
+        how="left",
+        on="Month Start"
+    )
+
+    target_period["Period_Working_Days"] = target_period["Period_Working_Days"].fillna(0)
+    target_period["Month_Working_Days"] = pd.to_numeric(
+        target_period["Month_Working_Days"],
+        errors="coerce"
+    ).fillna(0)
+
+    target_period[f"{prefix}_Target"] = np.where(
+        target_period["Month_Working_Days"] == 0,
+        0,
+        target_period["Target Crates"] / target_period["Month_Working_Days"] * target_period["Period_Working_Days"]
+    )
+
+    return target_pivot(target_period, f"{prefix}_Target", f"{prefix} Target")
+
+
+last_day_target_pivot = period_target_pivot(
+    REPORT_LAST_SHIPMENT_DATE,
+    REPORT_LAST_SHIPMENT_DATE,
+    "Last Day"
+)
+
+wtd_target_pivot = period_target_pivot(
+    CURRENT_WEEK_START,
+    REPORT_LAST_SHIPMENT_DATE,
+    "WTD"
+)
+
+# ==================================================================================================
+# LAST DAY / WTD SOURCE CHECKER
+# ==================================================================================================
+period_check = pd.DataFrame({
+    "Metric": [
+        "Last Day Shipment",
+        "WTD Shipment",
+        "Last Day PY Shipment",
+        "WTD PY Shipment",
+        "Last Day Depletion",
+        "WTD Depletion",
+        "Last Day PY Depletion",
+        "WTD PY Depletion"
+    ],
+    "Crates": [
+        last_day_actual_ab["Last_Day_Shipment"].sum() if "Last_Day_Shipment" in last_day_actual_ab.columns else 0,
+        wtd_actual_ab["WTD_Shipment"].sum() if "WTD_Shipment" in wtd_actual_ab.columns else 0,
+        last_day_py_ab["Last_Day_PY_Shipment"].sum() if "Last_Day_PY_Shipment" in last_day_py_ab.columns else 0,
+        wtd_py_ab["WTD_PY_Shipment"].sum() if "WTD_PY_Shipment" in wtd_py_ab.columns else 0,
+        last_day_depletion_ab["Last_Day_Depletion"].sum() if "Last_Day_Depletion" in last_day_depletion_ab.columns else 0,
+        wtd_depletion_ab["WTD_Depletion"].sum() if "WTD_Depletion" in wtd_depletion_ab.columns else 0,
+        last_day_py_depletion_ab["Last_Day_PY_Depletion"].sum() if "Last_Day_PY_Depletion" in last_day_py_depletion_ab.columns else 0,
+        wtd_py_depletion_ab["WTD_PY_Depletion"].sum() if "WTD_PY_Depletion" in wtd_py_depletion_ab.columns else 0
+    ]
+})
+
+period_check["HL"] = period_check["Crates"] * HL_PER_CRATE
+
+print("=" * 120)
+print("LAST DAY / WTD SOURCE CHECKER")
+print("=" * 120)
+print("Last day date used:", REPORT_LAST_SHIPMENT_DATE.date())
+print("WTD start Monday used:", CURRENT_WEEK_START.date())
+display(period_check)
+
+
+# --------------------------------------------------------------------------------------------------
+# Merge Last Day/WTD metrics into final_kpi_wide before UOM conversion.
+# --------------------------------------------------------------------------------------------------
+
+final_kpi_wide = (
+    final_kpi_wide
+    .merge(metric_only(last_day_actual_ab, ["Last_Day_Shipment"]), how="left", on=["Agent Key", "Brand KPI Key"])
+    .merge(metric_only(wtd_actual_ab, ["WTD_Shipment"]), how="left", on=["Agent Key", "Brand KPI Key"])
+    .merge(metric_only(last_day_py_ab, ["Last_Day_PY_Shipment"]), how="left", on=["Agent Key", "Brand KPI Key"])
+    .merge(metric_only(wtd_py_ab, ["WTD_PY_Shipment"]), how="left", on=["Agent Key", "Brand KPI Key"])
+    .merge(metric_only(last_day_depletion_ab, ["Last_Day_Depletion"]), how="left", on=["Agent Key", "Brand KPI Key"])
+    .merge(metric_only(wtd_depletion_ab, ["WTD_Depletion"]), how="left", on=["Agent Key", "Brand KPI Key"])
+    .merge(metric_only(last_day_py_depletion_ab, ["Last_Day_PY_Depletion"]), how="left", on=["Agent Key", "Brand KPI Key"])
+    .merge(metric_only(wtd_py_depletion_ab, ["WTD_PY_Depletion"]), how="left", on=["Agent Key", "Brand KPI Key"])
+    .merge(metric_only(mtd_py_depletion_ab, ["MTD_PY_Depletion"]), how="left", on=["Agent Key", "Brand KPI Key"])
+    .merge(metric_only(ytd_py_depletion_ab, ["YTD_PY_Depletion"]), how="left", on=["Agent Key", "Brand KPI Key"])
+    .merge(metric_only(last_day_target_pivot, ["Last Day Target_AOP", "Last Day Target_SNOP", "Last Day Target_Sales"]), how="left", on=["Agent Key", "Brand KPI Key"])
+    .merge(metric_only(wtd_target_pivot, ["WTD Target_AOP", "WTD Target_SNOP", "WTD Target_Sales"]), how="left", on=["Agent Key", "Brand KPI Key"])
+)
+
+final_kpi_wide = final_kpi_wide.rename(columns={
+    "Last Day Target_AOP": "Last Day Target AOP",
+    "Last Day Target_SNOP": "Last Day Target SNOP",
+    "Last Day Target_Sales": "Last Day Target Sales",
+    "WTD Target_AOP": "WTD Target AOP",
+    "WTD Target_SNOP": "WTD Target SNOP",
+    "WTD Target_Sales": "WTD Target Sales",
+})
+
+period_volume_cols_crates = [
+    "Last_Day_Shipment",
+    "WTD_Shipment",
+    "Last_Day_PY_Shipment",
+    "WTD_PY_Shipment",
+    "Last_Day_Depletion",
+    "WTD_Depletion",
+    "Last_Day_PY_Depletion",
+    "WTD_PY_Depletion",
+    "MTD_PY_Depletion",
+    "YTD_PY_Depletion",
+    "Last Day Target AOP",
+    "Last Day Target SNOP",
+    "Last Day Target Sales",
+    "WTD Target AOP",
+    "WTD Target SNOP",
+    "WTD Target Sales",
+]
+
+final_kpi_wide = ensure_numeric_columns(final_kpi_wide, period_volume_cols_crates)
+
+# ==================================================================================================
+# LAST DAY / WTD MERGE CHECK
+# ==================================================================================================
+# These totals must match the LAST DAY / WTD SOURCE CHECKER above.
+# If source checker has values but this section is zero, the merge keys are not matching.
+period_merge_check = pd.DataFrame({
+    "Metric": [
+        "Last_Day_Shipment",
+        "WTD_Shipment",
+        "Last_Day_Depletion",
+        "WTD_Depletion",
+        "Last_Day_PY_Shipment",
+        "WTD_PY_Shipment",
+        "Last_Day_PY_Depletion",
+        "WTD_PY_Depletion"
+    ],
+    "Crates": [
+        final_kpi_wide["Last_Day_Shipment"].sum(),
+        final_kpi_wide["WTD_Shipment"].sum(),
+        final_kpi_wide["Last_Day_Depletion"].sum(),
+        final_kpi_wide["WTD_Depletion"].sum(),
+        final_kpi_wide["Last_Day_PY_Shipment"].sum(),
+        final_kpi_wide["WTD_PY_Shipment"].sum(),
+        final_kpi_wide["Last_Day_PY_Depletion"].sum(),
+        final_kpi_wide["WTD_PY_Depletion"].sum()
+    ]
+})
+
+period_merge_check["HL"] = period_merge_check["Crates"] * HL_PER_CRATE
+
+print("=" * 120)
+print("LAST DAY / WTD MERGE CHECK")
+print("=" * 120)
+display(period_merge_check)
 
 
 # ==================================================================================================
@@ -2293,16 +2790,77 @@ final_kpi_wide = final_kpi_wide.rename(columns={
     "YTD_Shipment": "YTD Shipment",
     "YTD_PY_Shipment": "YTD PY Shipment",
     "YTD_Depletion": "YTD Depletion",
+    "Last_Day_Shipment": "Last Day Shipment",
+    "WTD_Shipment": "WTD Shipment",
+    "Last_Day_PY_Shipment": "Last Day PY Shipment",
+    "WTD_PY_Shipment": "WTD PY Shipment",
+    "Last_Day_Depletion": "Last Day Depletion",
+    "WTD_Depletion": "WTD Depletion",
+    "Last_Day_PY_Depletion": "Last Day PY Depletion",
+    "WTD_PY_Depletion": "WTD PY Depletion",
+    "MTD_PY_Depletion": "MTD PY Depletion",
+    "YTD_PY_Depletion": "YTD PY Depletion",
     "Yearly_Landing": "Yearly Landing",
     "Avg_Daily_MTD_Shipment": "Avg Daily MTD Shipment",
     "Avg_Daily_YTD_Shipment": "Avg Daily YTD Shipment",
 })
 
+duplicate_columns_after_rename = final_kpi_wide.columns[final_kpi_wide.columns.duplicated()].tolist()
+if duplicate_columns_after_rename:
+    print("=" * 120)
+    print("WARNING: DUPLICATE COLUMNS AFTER FINAL_KPI_WIDE RENAME")
+    print("=" * 120)
+    print(duplicate_columns_after_rename)
+    # Keep the last version because period columns are created after the earlier zero placeholders.
+    final_kpi_wide = final_kpi_wide.loc[:, ~final_kpi_wide.columns.duplicated(keep="last")].copy()
+
 final_columns = [
     "Division",
     "Agent",
     "Brand",
+    "Last Day Shipment",
+    "Last Day PY Shipment",
+    "Last Day Depletion",
+    "Last Day PY Depletion",
+    "Last Day Target AOP",
+    "Last Day Target SNOP",
+    "Last Day Target Sales",
+    "WTD Shipment",
+    "WTD PY Shipment",
+    "WTD Depletion",
+    "WTD PY Depletion",
+    "WTD Target AOP",
+    "WTD Target SNOP",
+    "WTD Target Sales",
+    "MTD PY Depletion",
+    "YTD PY Depletion",
     "Beginning Stock",
+    "Last Day Shipment",
+    "Last Day PY Shipment",
+    "Last Day Depletion",
+    "Last Day PY Depletion",
+    "Last Day Target AOP",
+    "Last Day Target SNOP",
+    "Last Day Target Sales",
+    "WTD Shipment",
+    "WTD PY Shipment",
+    "WTD Depletion",
+    "WTD PY Depletion",
+    "WTD Target AOP",
+    "WTD Target SNOP",
+    "WTD Target Sales",
+    "MTD PY Depletion",
+    "YTD PY Depletion",
+    "Last Day Shipment",
+    "Last Day PY Shipment",
+    "Last Day Depletion",
+    "Last Day PY Depletion",
+    "WTD Shipment",
+    "WTD PY Shipment",
+    "WTD Depletion",
+    "WTD PY Depletion",
+    "MTD PY Depletion",
+    "YTD PY Depletion",
     "MTD Shipment",
     "MTD PY Shipment",
     "MTD Achievement vs PY %",
@@ -2418,11 +2976,26 @@ final_kpi_hl["UOM"] = "HL"
 
 volume_cols_for_uom = [
     "Beginning Stock",
+    "Last Day Shipment",
+    "Last Day PY Shipment",
+    "Last Day Depletion",
+    "Last Day PY Depletion",
+    "Last Day Target AOP",
+    "Last Day Target SNOP",
+    "Last Day Target Sales",
+    "WTD Shipment",
+    "WTD PY Shipment",
+    "WTD Depletion",
+    "WTD PY Depletion",
+    "WTD Target AOP",
+    "WTD Target SNOP",
+    "WTD Target Sales",
     "MTD Shipment",
     "MTD PY Shipment",
+    "MTD PY Depletion",
     "MTD Variance vs PY",
     "MTD Depletion",
-    "Beginning Stock",
+    "YTD PY Depletion",
     "Stock Balance",
     "Avg Daily Depletion",
     "MTD Landing",
@@ -2657,6 +3230,33 @@ backend_kpi_report = ensure_backend_col(
     0
 )
 
+period_backend_map = {
+    "Last Day Shipment": ["Last Day Shipment", "Last_Day_Shipment"],
+    "Last Day PY Shipment": ["Last Day PY Shipment", "Last_Day_PY_Shipment"],
+    "Last Day Depletion": ["Last Day Depletion", "Last_Day_Depletion"],
+    "Last Day PY Depletion": ["Last Day PY Depletion", "Last_Day_PY_Depletion"],
+    "WTD Shipment": ["WTD Shipment", "WTD_Shipment"],
+    "WTD PY Shipment": ["WTD PY Shipment", "WTD_PY_Shipment"],
+    "WTD Depletion": ["WTD Depletion", "WTD_Depletion"],
+    "WTD PY Depletion": ["WTD PY Depletion", "WTD_PY_Depletion"],
+    "MTD PY Depletion": ["MTD PY Depletion", "MTD_PY_Depletion"],
+    "YTD PY Depletion": ["YTD PY Depletion", "YTD_PY_Depletion"],
+    "Last Day Target AOP": ["Last Day Target AOP"],
+    "Last Day Target SNOP": ["Last Day Target SNOP"],
+    "Last Day Target Sales": ["Last Day Target Sales"],
+    "WTD Target AOP": ["WTD Target AOP"],
+    "WTD Target SNOP": ["WTD Target SNOP"],
+    "WTD Target Sales": ["WTD Target Sales"],
+}
+
+for target_col, candidates in period_backend_map.items():
+    backend_kpi_report = ensure_backend_col(
+        backend_kpi_report,
+        target_col,
+        candidates,
+        0
+    )
+
 required_final_base_cols = [
     "Division",
     "Agent",
@@ -2679,6 +3279,22 @@ for col in required_final_base_cols:
 
 # Ensure numeric source fields are numeric before aggregation.
 numeric_backend_cols = [
+    "Last Day Shipment",
+    "Last Day PY Shipment",
+    "Last Day Depletion",
+    "Last Day PY Depletion",
+    "WTD Shipment",
+    "WTD PY Shipment",
+    "WTD Depletion",
+    "WTD PY Depletion",
+    "Last Day Target Sales",
+    "Last Day Target SNOP",
+    "Last Day Target AOP",
+    "WTD Target Sales",
+    "WTD Target SNOP",
+    "WTD Target AOP",
+    "MTD PY Depletion",
+    "YTD PY Depletion",
     "MTD Shipment",
     "YTD Shipment",
     "MTD Depletion",
@@ -2705,14 +3321,20 @@ for col in numeric_backend_cols:
 
 target_type_map = {
     "Sales": {
+        "Last Day Target": "Last Day Target Sales",
+        "WTD Target": "WTD Target Sales",
         "MTD Target": "MTD Target Sales",
         "YTD Target": "YTD Target Sales",
     },
     "SNOP": {
+        "Last Day Target": "Last Day Target SNOP",
+        "WTD Target": "WTD Target SNOP",
         "MTD Target": "MTD Target SNOP",
         "YTD Target": "YTD Target SNOP",
     },
     "AOP": {
+        "Last Day Target": "Last Day Target AOP",
+        "WTD Target": "WTD Target AOP",
         "MTD Target": "MTD Target AOP",
         "YTD Target": "YTD Target AOP",
     },
@@ -2728,27 +3350,39 @@ for uom_value in sorted(backend_kpi_report["UOM"].dropna().unique()):
 
     for target_type, target_cols in target_type_map.items():
 
+        last_day_target_col = target_cols["Last Day Target"]
+        wtd_target_col = target_cols["WTD Target"]
         mtd_target_col = target_cols["MTD Target"]
         ytd_target_col = target_cols["YTD Target"]
 
-        if mtd_target_col not in uom_source.columns:
-            uom_source[mtd_target_col] = 0
-
-        if ytd_target_col not in uom_source.columns:
-            uom_source[ytd_target_col] = 0
+        for target_col in [last_day_target_col, wtd_target_col, mtd_target_col, ytd_target_col]:
+            if target_col not in uom_source.columns:
+                uom_source[target_col] = 0
 
         temp_table = (
             uom_source
             .groupby(["Division", "Agent", "Brand", "UOM"], dropna=False)
             .agg(
+                Last_Day_Sales=("Last Day Shipment", "sum"),
+                Last_Day_Target=(last_day_target_col, "sum"),
+                Last_Day_Depletion=("Last Day Depletion", "sum"),
+                Last_Day_PY=("Last Day PY Shipment", "sum"),
+                Last_Day_Depletion_PY=("Last Day PY Depletion", "sum"),
+                WTD_Sales=("WTD Shipment", "sum"),
+                WTD_Target=(wtd_target_col, "sum"),
+                WTD_Depletion=("WTD Depletion", "sum"),
+                WTD_PY=("WTD PY Shipment", "sum"),
+                WTD_Depletion_PY=("WTD PY Depletion", "sum"),
                 MTD_Sales=("MTD Shipment", "sum"),
                 MTD_Target=(mtd_target_col, "sum"),
                 MTD_Depletion=("MTD Depletion", "sum"),
+                MTD_PY=("MTD PY Shipment", "sum"),
+                MTD_Depletion_PY=("MTD PY Depletion", "sum"),
                 YTD_Sales=("YTD Shipment", "sum"),
                 YTD_Target=(ytd_target_col, "sum"),
                 YTD_Depletion=("YTD Depletion", "sum"),
-                MTD_PY=("MTD PY Shipment", "sum"),
                 YTD_PY=("YTD PY Shipment", "sum"),
+                YTD_Depletion_PY=("YTD PY Depletion", "sum"),
                 Beginning_Stock=("Beginning Stock", "sum"),
                 Stock_per_Agent=("Stock Balance", "sum"),
                 Avg_Daily_Depletion=("Avg Daily Depletion", "sum")
@@ -2757,6 +3391,46 @@ for uom_value in sorted(backend_kpi_report["UOM"].dropna().unique()):
         )
 
         temp_table["Target Type"] = target_type
+
+        temp_table["Last Day Ach"] = safe_divide(
+            temp_table["Last_Day_Sales"],
+            temp_table["Last_Day_Target"]
+        ) - 1
+
+        temp_table["Last Day Sales vs PY"] = safe_divide(
+            temp_table["Last_Day_Sales"],
+            temp_table["Last_Day_PY"]
+        ) - 1
+
+        temp_table["Last Day Depletion Ach"] = safe_divide(
+            temp_table["Last_Day_Depletion"],
+            temp_table["Last_Day_Target"]
+        ) - 1
+
+        temp_table["Last Day Depletion vs PY"] = safe_divide(
+            temp_table["Last_Day_Depletion"],
+            temp_table["Last_Day_Depletion_PY"]
+        ) - 1
+
+        temp_table["WTD Ach"] = safe_divide(
+            temp_table["WTD_Sales"],
+            temp_table["WTD_Target"]
+        ) - 1
+
+        temp_table["WTD Sales vs PY"] = safe_divide(
+            temp_table["WTD_Sales"],
+            temp_table["WTD_PY"]
+        ) - 1
+
+        temp_table["WTD Depletion Ach"] = safe_divide(
+            temp_table["WTD_Depletion"],
+            temp_table["WTD_Target"]
+        ) - 1
+
+        temp_table["WTD Depletion vs PY"] = safe_divide(
+            temp_table["WTD_Depletion"],
+            temp_table["WTD_Depletion_PY"]
+        ) - 1
 
         temp_table["MTD Ach"] = safe_divide(
             temp_table["MTD_Sales"],
@@ -2786,6 +3460,16 @@ for uom_value in sorted(backend_kpi_report["UOM"].dropna().unique()):
         temp_table["YTD Depletion Ach"] = safe_divide(
             temp_table["YTD_Depletion"],
             temp_table["YTD_Target"]
+        ) - 1
+
+        temp_table["MTD Depletion vs PY"] = safe_divide(
+            temp_table["MTD_Depletion"],
+            temp_table["MTD_Depletion_PY"]
+        ) - 1
+
+        temp_table["YTD Depletion vs PY"] = safe_divide(
+            temp_table["YTD_Depletion"],
+            temp_table["YTD_Depletion_PY"]
         ) - 1
 
         # Correct stock coverage.
@@ -2882,14 +3566,26 @@ final_kpi_report = (
         dropna=False
     )
     .agg(
+        Last_Day_Sales=("Last_Day_Sales", "sum"),
+        Last_Day_Target=("Last_Day_Target", "sum"),
+        Last_Day_Depletion=("Last_Day_Depletion", "sum"),
+        Last_Day_PY=("Last_Day_PY", "sum"),
+        Last_Day_Depletion_PY=("Last_Day_Depletion_PY", "sum"),
+        WTD_Sales=("WTD_Sales", "sum"),
+        WTD_Target=("WTD_Target", "sum"),
+        WTD_Depletion=("WTD_Depletion", "sum"),
+        WTD_PY=("WTD_PY", "sum"),
+        WTD_Depletion_PY=("WTD_Depletion_PY", "sum"),
         MTD_Sales=("MTD_Sales", "sum"),
         MTD_Target=("MTD_Target", "sum"),
         MTD_Depletion=("MTD_Depletion", "sum"),
+        MTD_PY=("MTD_PY", "sum"),
+        MTD_Depletion_PY=("MTD_Depletion_PY", "sum"),
         YTD_Sales=("YTD_Sales", "sum"),
         YTD_Target=("YTD_Target", "sum"),
         YTD_Depletion=("YTD_Depletion", "sum"),
-        MTD_PY=("MTD_PY", "sum"),
         YTD_PY=("YTD_PY", "sum"),
+        YTD_Depletion_PY=("YTD_Depletion_PY", "sum"),
         Beginning_Stock=("Beginning_Stock", "sum"),
         Stock_per_Agent=("Stock_per_Agent", "sum"),
         Avg_Daily_Depletion=("Avg_Daily_Depletion", "sum")
@@ -2897,7 +3593,136 @@ final_kpi_report = (
     .reset_index()
 )
 
+# ==================================================================================================
+# FIX STOCK FROM ORIGINAL STOCK SOURCE AFTER FINAL AGGREGATION
+# ==================================================================================================
+# Root cause:
+# During the final reporting rebuild, stock can shift because the report table is rebuilt
+# through the UOM/Target Type backend section. To make Beginning Stock exact, overwrite it
+# from the original stock_ab table that came directly from Stock.xlsx.
+#
+# This keeps:
+#   Beginning_Stock = exact latest stock source
+#   Stock_per_Agent = Beginning_Stock + MTD_Sales - MTD_Depletion
+#   Days of Stock   = Stock_per_Agent / Avg_Daily_Depletion
+# ==================================================================================================
+
+stock_exact_crates = stock_ab.copy()
+stock_exact_crates["Division"] = stock_exact_crates["Division"].apply(proper_text)
+stock_exact_crates["Agent"] = stock_exact_crates["Agent"].apply(proper_text)
+stock_exact_crates["Brand"] = stock_exact_crates["Brand KPI Key"].apply(brand_display_name).apply(proper_text)
+stock_exact_crates["UOM"] = "Crates"
+stock_exact_crates["Beginning_Stock_Exact"] = pd.to_numeric(
+    stock_exact_crates["Beginning_Stock"],
+    errors="coerce"
+).fillna(0)
+
+stock_exact_hl = stock_exact_crates.copy()
+stock_exact_hl["UOM"] = "HL"
+stock_exact_hl["Beginning_Stock_Exact"] = stock_exact_hl["Beginning_Stock_Exact"] * HL_PER_CRATE
+
+stock_exact = pd.concat(
+    [stock_exact_crates, stock_exact_hl],
+    ignore_index=True
+)
+
+stock_exact = (
+    stock_exact
+    .groupby(["Division", "Agent", "Brand", "UOM"], dropna=False)
+    .agg(Beginning_Stock_Exact=("Beginning_Stock_Exact", "sum"))
+    .reset_index()
+)
+
+before_stock_total_check = (
+    final_kpi_report
+    .groupby("UOM", dropna=False)
+    .agg(Beginning_Stock_Before=("Beginning_Stock", "sum"))
+    .reset_index()
+)
+
+final_kpi_report = final_kpi_report.merge(
+    stock_exact,
+    how="left",
+    on=["Division", "Agent", "Brand", "UOM"]
+)
+
+final_kpi_report["Beginning_Stock"] = pd.to_numeric(
+    final_kpi_report["Beginning_Stock_Exact"],
+    errors="coerce"
+).fillna(0)
+
+final_kpi_report = final_kpi_report.drop(columns=["Beginning_Stock_Exact"], errors="ignore")
+
+# Recalculate stock balance using exact beginning stock.
+final_kpi_report["Stock_per_Agent"] = (
+    final_kpi_report["Beginning_Stock"] +
+    pd.to_numeric(final_kpi_report["MTD_Sales"], errors="coerce").fillna(0) -
+    pd.to_numeric(final_kpi_report["MTD_Depletion"], errors="coerce").fillna(0)
+).clip(lower=0)
+
+after_stock_total_check = (
+    final_kpi_report
+    .groupby("UOM", dropna=False)
+    .agg(
+        Beginning_Stock_After=("Beginning_Stock", "sum"),
+        Stock_Balance_After=("Stock_per_Agent", "sum"),
+        MTD_Sales=("MTD_Sales", "sum"),
+        MTD_Depletion=("MTD_Depletion", "sum")
+    )
+    .reset_index()
+)
+
+print("=" * 120)
+print("FINAL STOCK FIX CHECK - EXACT SOURCE STOCK APPLIED")
+print("=" * 120)
+print("Expected source stock crates:", f"{stock_long['Beginning_Stock'].sum():,.2f}")
+print("Expected source stock HL:", f"{stock_long['Beginning_Stock'].sum() * HL_PER_CRATE:,.2f}")
+print("Before applying exact stock:")
+display(before_stock_total_check)
+print("After applying exact stock:")
+display(after_stock_total_check)
+
 # Recalculate all ratios after re-aggregation.
+final_kpi_report["Last Day Ach"] = safe_divide(
+    final_kpi_report["Last_Day_Sales"],
+    final_kpi_report["Last_Day_Target"]
+) - 1
+
+final_kpi_report["Last Day Sales vs PY"] = safe_divide(
+    final_kpi_report["Last_Day_Sales"],
+    final_kpi_report["Last_Day_PY"]
+) - 1
+
+final_kpi_report["Last Day Depletion Ach"] = safe_divide(
+    final_kpi_report["Last_Day_Depletion"],
+    final_kpi_report["Last_Day_Target"]
+) - 1
+
+final_kpi_report["Last Day Depletion vs PY"] = safe_divide(
+    final_kpi_report["Last_Day_Depletion"],
+    final_kpi_report["Last_Day_Depletion_PY"]
+) - 1
+
+final_kpi_report["WTD Ach"] = safe_divide(
+    final_kpi_report["WTD_Sales"],
+    final_kpi_report["WTD_Target"]
+) - 1
+
+final_kpi_report["WTD Sales vs PY"] = safe_divide(
+    final_kpi_report["WTD_Sales"],
+    final_kpi_report["WTD_PY"]
+) - 1
+
+final_kpi_report["WTD Depletion Ach"] = safe_divide(
+    final_kpi_report["WTD_Depletion"],
+    final_kpi_report["WTD_Target"]
+) - 1
+
+final_kpi_report["WTD Depletion vs PY"] = safe_divide(
+    final_kpi_report["WTD_Depletion"],
+    final_kpi_report["WTD_Depletion_PY"]
+) - 1
+
 final_kpi_report["MTD Ach"] = safe_divide(
     final_kpi_report["MTD_Sales"],
     final_kpi_report["MTD_Target"]
@@ -2928,10 +3753,21 @@ final_kpi_report["YTD Depletion Ach"] = safe_divide(
     final_kpi_report["YTD_Target"]
 ) - 1
 
+final_kpi_report["MTD Depletion vs PY"] = safe_divide(
+    final_kpi_report["MTD_Depletion"],
+    final_kpi_report["MTD_Depletion_PY"]
+) - 1
+
+final_kpi_report["YTD Depletion vs PY"] = safe_divide(
+    final_kpi_report["YTD_Depletion"],
+    final_kpi_report["YTD_Depletion_PY"]
+) - 1
+
 final_kpi_report["Days of Stock"] = safe_divide(
     final_kpi_report["Stock_per_Agent"],
     final_kpi_report["Avg_Daily_Depletion"]
 )
+
 
 final_kpi_report["Stock Level Flag"] = np.select(
     [
@@ -2954,20 +3790,42 @@ final_kpi_report = final_kpi_report[
         "Brand",
         "UOM",
         "Target Type",
+        "Last_Day_Sales",
+        "Last_Day_Target",
+        "Last Day Ach",
+        "Last_Day_PY",
+        "Last Day Sales vs PY",
+        "Last_Day_Depletion",
+        "Last Day Depletion Ach",
+        "Last_Day_Depletion_PY",
+        "Last Day Depletion vs PY",
+        "WTD_Sales",
+        "WTD_Target",
+        "WTD Ach",
+        "WTD_PY",
+        "WTD Sales vs PY",
+        "WTD_Depletion",
+        "WTD Depletion Ach",
+        "WTD_Depletion_PY",
+        "WTD Depletion vs PY",
         "MTD_Sales",
         "MTD_Target",
         "MTD Ach",
+        "MTD_PY",
+        "MTD Sales vs PY",
         "MTD_Depletion",
         "MTD Depletion Ach",
+        "MTD_Depletion_PY",
+        "MTD Depletion vs PY",
         "YTD_Sales",
         "YTD_Target",
         "YTD Ach",
-        "YTD_Depletion",
-        "YTD Depletion Ach",
-        "MTD_PY",
-        "MTD Sales vs PY",
         "YTD_PY",
         "YTD VS PY Ach",
+        "YTD_Depletion",
+        "YTD Depletion Ach",
+        "YTD_Depletion_PY",
+        "YTD Depletion vs PY",
         "Beginning_Stock",
         "Stock_per_Agent",
         "Avg_Daily_Depletion",
@@ -2992,14 +3850,26 @@ final_kpi_report_display = final_kpi_report_display.loc[
 ].copy()
 
 number_cols_final = [
+    "Last_Day_Sales",
+    "Last_Day_Target",
+    "Last_Day_Depletion",
+    "Last_Day_PY",
+    "Last_Day_Depletion_PY",
+    "WTD_Sales",
+    "WTD_Target",
+    "WTD_Depletion",
+    "WTD_PY",
+    "WTD_Depletion_PY",
     "MTD_Sales",
     "MTD_Target",
     "MTD_Depletion",
+    "MTD_PY",
+    "MTD_Depletion_PY",
     "YTD_Sales",
     "YTD_Target",
     "YTD_Depletion",
-    "MTD_PY",
     "YTD_PY",
+    "YTD_Depletion_PY",
     "Beginning_Stock",
     "Stock_per_Agent",
     "Avg_Daily_Depletion",
@@ -3007,10 +3877,20 @@ number_cols_final = [
 ]
 
 growth_cols_final = [
+    "Last Day Ach",
+    "Last Day Sales vs PY",
+    "Last Day Depletion Ach",
+    "Last Day Depletion vs PY",
+    "WTD Ach",
+    "WTD Sales vs PY",
+    "WTD Depletion Ach",
+    "WTD Depletion vs PY",
     "MTD Ach",
     "MTD Depletion Ach",
+    "MTD Depletion vs PY",
     "YTD Ach",
     "YTD Depletion Ach",
+    "YTD Depletion vs PY",
     "MTD Sales vs PY",
     "YTD VS PY Ach"
 ]
@@ -3120,13 +4000,61 @@ print("FINAL EXTRACT TOTAL CHECK BY UOM AND TARGET TYPE")
 print("=" * 120)
 display(final_total_check_display)
 
+final_stock_check = (
+    final_kpi_report
+    .groupby(["UOM", "Target Type"], dropna=False)
+    .agg(
+        Beginning_Stock=("Beginning_Stock", "sum"),
+        Stock_Balance=("Stock_per_Agent", "sum"),
+        Avg_Daily_Depletion=("Avg_Daily_Depletion", "sum"),
+        Days_of_Stock=("Days of Stock", "mean")
+    )
+    .reset_index()
+)
+
+print("=" * 120)
+print("FINAL STOCK CHECK BY UOM AND TARGET TYPE")
+print("=" * 120)
+display(final_stock_check)
+
 # --------------------------------------------------------------------------------------------------
 # Export only the final extract.
 # --------------------------------------------------------------------------------------------------
 
-final_output_file = BASE_FOLDER / "final_kpi_report.csv"
+EXTRACTION_FOLDER.mkdir(parents=True, exist_ok=True)
+final_output_file = EXTRACTION_FOLDER / "final_kpi_report.csv"
 final_kpi_report = final_kpi_report.loc[:, ~final_kpi_report.columns.duplicated()].copy()
 final_kpi_report.to_csv(final_output_file, index=False, encoding="utf-8-sig")
+
+final_period_check = (
+    final_kpi_report
+    .groupby(["UOM", "Target Type"], dropna=False)
+    .agg(
+        Last_Day_Sales=("Last_Day_Sales", "sum"),
+        Last_Day_Target=("Last_Day_Target", "sum"),
+        Last_Day_Depletion=("Last_Day_Depletion", "sum"),
+        WTD_Sales=("WTD_Sales", "sum"),
+        WTD_Target=("WTD_Target", "sum"),
+        WTD_Depletion=("WTD_Depletion", "sum"),
+        MTD_Sales=("MTD_Sales", "sum"),
+        YTD_Sales=("YTD_Sales", "sum")
+    )
+    .reset_index()
+)
+
+print("=" * 120)
+print("FINAL LAST DAY / WTD EXPORT CHECK")
+print("=" * 120)
+display(final_period_check)
+
+zero_period_rows = final_period_check[
+    (final_period_check["Last_Day_Sales"].fillna(0) == 0) &
+    (final_period_check["WTD_Sales"].fillna(0) == 0)
+]
+
+if len(zero_period_rows) > 0:
+    print("⚠️ WARNING: Some UOM/Target Type rows still have zero Last Day and WTD Sales.")
+    print("Check the SHIPMENT DATE RANGE CHECK above and confirm final_kpi_report.csv was regenerated.")
 
 print("=" * 120)
 print("FINAL EXTRACT EXPORTED")

@@ -158,6 +158,22 @@
       gap: 13px;
     }
 
+    .section-title {
+      margin: 22px 0 8px;
+      font-size: 18px;
+      font-weight: 850;
+      color: var(--ink);
+      letter-spacing: -0.2px;
+    }
+
+    .stock-cards {
+      grid-template-columns: minmax(260px, 1fr);
+    }
+
+    .stock-cards .card {
+      max-width: 520px;
+    }
+
     .card {
       background: var(--card);
       border: 1px solid var(--line);
@@ -614,6 +630,49 @@
         width: 100%;
       }
     }
+  
+    /* Compact National Stock Level card */
+    .stock-card {
+      max-width: 560px;
+      min-height: auto;
+      padding: 16px 18px;
+    }
+
+    .stock-card .value {
+      font-size: 2.05rem;
+      margin-bottom: 10px;
+    }
+
+    .stock-card .stock-input-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px 12px;
+      margin-top: 8px;
+    }
+
+    .stock-card .stock-input {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 8px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      font-size: 0.72rem;
+      line-height: 1.15;
+      white-space: nowrap;
+    }
+
+    .stock-card .stock-input span {
+      opacity: 0.78;
+      font-weight: 600;
+    }
+
+    .stock-card .stock-input strong {
+      font-size: 0.74rem;
+      font-weight: 800;
+    }
+
   </style>
 </head>
 
@@ -629,7 +688,7 @@
       </div>
     </header>
 
-    <div id="loadStatus" class="load-status">Upload final_kpi_report.csv or keep it in the same folder as this HTML.</div>
+    <div id="loadStatus" class="load-status" style="display:none;"></div>
 
     <div class="pattern-strip"></div>
 
@@ -656,40 +715,79 @@
       </div>
     </section>
 
-    <section class="cards combined-cards">
+    <h2 class="section-title">Shipment</h2>
+    <section class="cards combined-cards shipment-cards">
       <div class="card combo-card">
-        <div class="label">MTD Sipm</div>
+        <div class="label">Last Day Shipment</div>
+        <div id="lastDaySalesCard" class="value">0</div>
+        <div class="combo-line"><span>Vs Target</span><strong id="lastDaySalesAchCard">0%</strong></div>
+        <div class="combo-line"><span>Growth vs PY</span><strong id="lastDaySalesPyCard">0%</strong></div>
+      </div>
+
+      <div class="card combo-card">
+        <div class="label">WTD Shipment</div>
+        <div id="wtdSalesCard" class="value">0</div>
+        <div class="combo-line"><span>Vs Target</span><strong id="wtdSalesAchCard">0%</strong></div>
+        <div class="combo-line"><span>Growth vs PY</span><strong id="wtdSalesPyCard">0%</strong></div>
+      </div>
+
+      <div class="card combo-card">
+        <div class="label">MTD Shipment</div>
         <div id="mtdSalesCard" class="value">0</div>
-        <div class="combo-line">
-          <span>Achievement vs Target</span>
-          <strong id="mtdAchCard">0%</strong>
-        </div>
+        <div class="combo-line"><span>Vs Target</span><strong id="mtdAchCard">0%</strong></div>
+        <div class="combo-line"><span>Growth vs PY</span><strong id="mtdSalesPyCard">0%</strong></div>
       </div>
 
       <div class="card combo-card">
-        <div class="label">YTD Sipm</div>
+        <div class="label">YTD Shipment</div>
         <div id="ytdSalesCard" class="value">0</div>
-        <div class="combo-line">
-          <span>Achievement vs Target</span>
-          <strong id="ytdAchCard">0%</strong>
-        </div>
+        <div class="combo-line"><span>Vs Target</span><strong id="ytdAchCard">0%</strong></div>
+        <div class="combo-line"><span>Growth vs PY</span><strong id="ytdSalesPyCard">0%</strong></div>
+      </div>
+    </section>
+
+    <h2 class="section-title">Depletion</h2>
+    <section class="cards combined-cards depletion-cards">
+      <div class="card combo-card">
+        <div class="label">Last Day Depletion</div>
+        <div id="lastDayDepletionCard" class="value">0</div>
+        <div class="combo-line"><span>Vs Target</span><strong id="lastDayDepletionAchCard">0%</strong></div>
+        <div class="combo-line"><span>Growth vs PY</span><strong id="lastDayDepletionPyCard">0%</strong></div>
       </div>
 
       <div class="card combo-card">
-        <div class="label">MTD Dip</div>
+        <div class="label">WTD Depletion</div>
+        <div id="wtdDepletionCard" class="value">0</div>
+        <div class="combo-line"><span>Vs Target</span><strong id="wtdDepletionAchCard">0%</strong></div>
+        <div class="combo-line"><span>Growth vs PY</span><strong id="wtdDepletionPyCard">0%</strong></div>
+      </div>
+
+      <div class="card combo-card">
+        <div class="label">MTD Depletion</div>
         <div id="mtdDepletionCard" class="value">0</div>
-        <div class="combo-line">
-          <span>Achievement vs Target</span>
-          <strong id="mtdDepletionAchCard">0%</strong>
-        </div>
+        <div class="combo-line"><span>Vs Target</span><strong id="mtdDepletionAchCard">0%</strong></div>
+        <div class="combo-line"><span>Growth vs PY</span><strong id="mtdDepletionPyCard">0%</strong></div>
       </div>
 
       <div class="card combo-card">
-        <div class="label">YTD Dip</div>
+        <div class="label">YTD Depletion</div>
         <div id="ytdDepletionCard" class="value">0</div>
-        <div class="combo-line">
-          <span>Achievement vs Target</span>
-          <strong id="ytdDepletionAchCard">0%</strong>
+        <div class="combo-line"><span>Vs Target</span><strong id="ytdDepletionAchCard">0%</strong></div>
+        <div class="combo-line"><span>Growth vs PY</span><strong id="ytdDepletionPyCard">0%</strong></div>
+      </div>
+    </section>
+
+    <h2 class="section-title">National Stock Level</h2>
+    <section class="cards stock-cards">
+      <div class="card combo-card stock-card">
+        <div class="label">Stock Covering Days</div>
+        <div id="stockDaysCard" class="value">0</div>
+        <div class="stock-input-grid">
+          <div class="stock-input"><span>Beginning Stock</span><strong id="stockBeginningCard">0</strong></div>
+          <div class="stock-input"><span>MTD Shipment</span><strong id="stockMtdShipmentCard">0</strong></div>
+          <div class="stock-input"><span>MTD Depletion</span><strong id="stockMtdDepletionCard">0</strong></div>
+          <div class="stock-input"><span>Stock Balance</span><strong id="stockCurrentCard">0</strong></div>
+          <div class="stock-input"><span>Avg Daily Dep.</span><strong id="stockAvgDailyDipCard">0</strong></div>
         </div>
       </div>
     </section>
@@ -739,7 +837,7 @@
     <section class="table-panel">
       <div class="table-top">
         <h2>Detailed Report</h2>
-        <input id="tableSearch" class="search" type="text" placeholder="Search agent / brand / division..." />
+        <input id="tableSearch" class="search" type="text" placeholder="Search agent / division..." />
       </div>
       <div class="table-wrap">
         <table id="dataTable">
@@ -775,31 +873,53 @@
     const $ = (id) => document.getElementById(id);
 
     const numericCols = [
-      "MTD_Sales", "MTD_Target", "MTD Ach", "MTD_Depletion", "MTD Depletion Ach",
-      "YTD_Sales", "YTD_Target", "YTD Ach", "YTD_Depletion", "YTD Depletion Ach",
+      "Last_Day_Sales", "Last_Day_Target", "Last Day Ach", "Last_Day_PY", "Last Day Sales vs PY",
+      "Last_Day_Depletion", "Last Day Depletion Ach", "Last_Day_Depletion_PY", "Last Day Depletion vs PY",
+      "WTD_Sales", "WTD_Target", "WTD Ach", "WTD_PY", "WTD Sales vs PY",
+      "WTD_Depletion", "WTD Depletion Ach", "WTD_Depletion_PY", "WTD Depletion vs PY",
+      "MTD_Sales", "MTD_Target", "MTD Ach", "MTD_Depletion", "MTD Depletion Ach", "MTD_Depletion_PY", "MTD Depletion vs PY",
+      "YTD_Sales", "YTD_Target", "YTD Ach", "YTD_Depletion", "YTD Depletion Ach", "YTD_Depletion_PY", "YTD Depletion vs PY",
       "MTD_PY", "MTD Sales vs PY", "YTD_PY", "YTD VS PY Ach",
       "Beginning_Stock", "Stock_per_Agent", "Avg_Daily_Depletion", "Days of Stock"
     ];
 
     const percentCols = [
-      "MTD Ach", "MTD Depletion Ach", "YTD Ach", "YTD Depletion Ach",
+      "Last Day Ach", "Last Day Sales vs PY", "Last Day Depletion Ach", "Last Day Depletion vs PY",
+      "WTD Ach", "WTD Sales vs PY", "WTD Depletion Ach", "WTD Depletion vs PY",
+      "MTD Ach", "MTD Depletion Ach", "MTD Depletion vs PY", "YTD Ach", "YTD Depletion Ach", "YTD Depletion vs PY",
       "MTD Sales vs PY", "YTD VS PY Ach"
     ];
 
     const preferredCols = [
       "Division", "Agent", "Brand", "UOM", "Target Type",
-      "MTD_Sales", "MTD_Target", "MTD Ach",
-      "MTD_Depletion", "MTD Depletion Ach",
-      "YTD_Sales", "YTD_Target", "YTD Ach",
-      "YTD_Depletion", "YTD Depletion Ach",
-      "MTD_PY", "MTD Sales vs PY",
-      "YTD_PY", "YTD VS PY Ach",
+      "Last_Day_Sales", "Last_Day_Target", "Last Day Ach", "Last_Day_PY", "Last Day Sales vs PY",
+      "Last_Day_Depletion", "Last Day Depletion Ach", "Last_Day_Depletion_PY", "Last Day Depletion vs PY",
+      "WTD_Sales", "WTD_Target", "WTD Ach", "WTD_PY", "WTD Sales vs PY",
+      "WTD_Depletion", "WTD Depletion Ach", "WTD_Depletion_PY", "WTD Depletion vs PY",
+      "MTD_Sales", "MTD_Target", "MTD Ach", "MTD_PY", "MTD Sales vs PY",
+      "MTD_Depletion", "MTD Depletion Ach", "MTD_Depletion_PY", "MTD Depletion vs PY",
+      "YTD_Sales", "YTD_Target", "YTD Ach", "YTD_PY", "YTD VS PY Ach",
+      "YTD_Depletion", "YTD Depletion Ach", "YTD_Depletion_PY", "YTD Depletion vs PY",
       "Beginning_Stock", "Stock_per_Agent", "Avg_Daily_Depletion", "Days of Stock", "Stock Level Flag"
     ];
 
     function setStatus(message, type = "") {
       const el = $("loadStatus");
       if (!el) return;
+
+      // Keep default "CSV not found / use upload button" messages hidden from the report.
+      const hiddenMessages = [
+        "Default final_kpi_report.csv was not found beside the HTML. Use the upload button.",
+        "Upload final_kpi_report.csv or keep it in the same folder as this HTML."
+      ];
+
+      if (!type || hiddenMessages.includes(message)) {
+        el.style.display = "none";
+        el.textContent = "";
+        return;
+      }
+
+      el.style.display = "block";
       el.className = "load-status" + (type ? " " + type : "");
       el.textContent = message;
     }
@@ -844,20 +964,42 @@
 
     function displayName(col) {
       const names = {
-        "MTD_Sales": "MTD Sipm",
-        "YTD_Sales": "YTD Sipm",
+        "Last_Day_Sales": "Last Day Shipment",
+        "Last_Day_Target": "Last Day Target",
+        "Last Day Ach": "Last Day Shipment Ach%",
+        "Last_Day_PY": "Last Day Shipment PY",
+        "Last Day Sales vs PY": "Last Day Shipment vs PY%",
+        "Last_Day_Depletion": "Last Day Dip",
+        "Last Day Depletion Ach": "Last Day Dip Ach%",
+        "Last_Day_Depletion_PY": "Last Day Dip PY",
+        "Last Day Depletion vs PY": "Last Day Dip vs PY%",
+        "WTD_Sales": "WTD Shipment",
+        "WTD_Target": "WTD Target",
+        "WTD Ach": "WTD Shipment Ach%",
+        "WTD_PY": "WTD Shipment PY",
+        "WTD Sales vs PY": "WTD Shipment vs PY%",
+        "WTD_Depletion": "WTD Dip",
+        "WTD Depletion Ach": "WTD Dip Ach%",
+        "WTD_Depletion_PY": "WTD Dip PY",
+        "WTD Depletion vs PY": "WTD Dip vs PY%",
+        "MTD_Sales": "MTD Shipment",
+        "YTD_Sales": "YTD Shipment",
         "MTD_Target": "MTD Target",
         "YTD_Target": "YTD Target",
-        "MTD Ach": "MTD Sipm Ach%",
-        "YTD Ach": "YTD Sipm Ach%",
+        "MTD Ach": "MTD Shipment Ach%",
+        "YTD Ach": "YTD Shipment Ach%",
         "MTD_Depletion": "MTD Dip",
         "YTD_Depletion": "YTD Dip",
         "MTD Depletion Ach": "MTD Dip Ach%",
         "YTD Depletion Ach": "YTD Dip Ach%",
-        "MTD_PY": "MTD Sipm PY",
-        "YTD_PY": "YTD Sipm PY",
-        "MTD Sales vs PY": "MTD Sipm vs PY%",
-        "YTD VS PY Ach": "YTD Sipm vs PY%",
+        "MTD_Depletion_PY": "MTD Dip PY",
+        "YTD_Depletion_PY": "YTD Dip PY",
+        "MTD Depletion vs PY": "MTD Dip vs PY%",
+        "YTD Depletion vs PY": "YTD Dip vs PY%",
+        "MTD_PY": "MTD Shipment PY",
+        "YTD_PY": "YTD Shipment PY",
+        "MTD Sales vs PY": "MTD Shipment vs PY%",
+        "YTD VS PY Ach": "YTD Shipment vs PY%",
         "Target Type": "Target",
         "Stock Level Flag": "Stock Flag",
         "Beginning_Stock": "Beginning Stock",
@@ -912,12 +1054,34 @@
       r["Target Type"] = normalizeTargetType(pick(row, ["Target Type", "Target_Type", "Target"], ""));
       r["Stock Level Flag"] = String(pick(row, ["Stock Level Flag", "Stock_Level_Flag", "Stock Flag"], "")).trim();
 
+      r["Last_Day_Sales"] = toNum(pick(row, ["Last_Day_Sales", "Last Day Sales", "Last Day Shipment"], 0));
+      r["Last_Day_Target"] = toNum(pick(row, ["Last_Day_Target", "Last Day Target"], 0));
+      r["Last Day Ach"] = toNum(pick(row, ["Last Day Ach", "Last_Day_Ach", "Last Day Shipment Ach%"], 0));
+      r["Last_Day_PY"] = toNum(pick(row, ["Last_Day_PY", "Last Day PY", "Last Day Shipment PY"], 0));
+      r["Last Day Sales vs PY"] = toNum(pick(row, ["Last Day Sales vs PY", "Last Day Shipment vs PY%"], 0));
+      r["Last_Day_Depletion"] = toNum(pick(row, ["Last_Day_Depletion", "Last Day Depletion", "Last Day Dip"], 0));
+      r["Last Day Depletion Ach"] = toNum(pick(row, ["Last Day Depletion Ach", "Last Day Dip Ach%"], 0));
+      r["Last_Day_Depletion_PY"] = toNum(pick(row, ["Last_Day_Depletion_PY", "Last Day Depletion PY", "Last Day Dip PY"], 0));
+      r["Last Day Depletion vs PY"] = toNum(pick(row, ["Last Day Depletion vs PY", "Last Day Dip vs PY%"], 0));
+
+      r["WTD_Sales"] = toNum(pick(row, ["WTD_Sales", "WTD Sales", "WTD Shipment"], 0));
+      r["WTD_Target"] = toNum(pick(row, ["WTD_Target", "WTD Target"], 0));
+      r["WTD Ach"] = toNum(pick(row, ["WTD Ach", "WTD_Ach", "WTD Shipment Ach%"], 0));
+      r["WTD_PY"] = toNum(pick(row, ["WTD_PY", "WTD PY", "WTD Shipment PY"], 0));
+      r["WTD Sales vs PY"] = toNum(pick(row, ["WTD Sales vs PY", "WTD Shipment vs PY%"], 0));
+      r["WTD_Depletion"] = toNum(pick(row, ["WTD_Depletion", "WTD Depletion", "WTD Dip"], 0));
+      r["WTD Depletion Ach"] = toNum(pick(row, ["WTD Depletion Ach", "WTD Dip Ach%"], 0));
+      r["WTD_Depletion_PY"] = toNum(pick(row, ["WTD_Depletion_PY", "WTD Depletion PY", "WTD Dip PY"], 0));
+      r["WTD Depletion vs PY"] = toNum(pick(row, ["WTD Depletion vs PY", "WTD Dip vs PY%"], 0));
+
       r["MTD_Sales"] = toNum(pick(row, ["MTD_Sales", "MTD Sales", "MTD Shipment", "MTD Sipm"], 0));
       r["MTD_Target"] = toNum(pick(row, ["MTD_Target", "MTD Target"], 0));
       r["MTD Ach"] = toNum(pick(row, ["MTD Ach", "MTD_Ach", "MTD Sipm Ach%"], 0));
 
       r["MTD_Depletion"] = toNum(pick(row, ["MTD_Depletion", "MTD Depletion", "MTD Dip"], 0));
       r["MTD Depletion Ach"] = toNum(pick(row, ["MTD Depletion Ach", "MTD Depletion vs Shipment", "MTD Dip Ach%"], 0));
+      r["MTD_Depletion_PY"] = toNum(pick(row, ["MTD_Depletion_PY", "MTD Depletion PY", "MTD Dip PY"], 0));
+      r["MTD Depletion vs PY"] = toNum(pick(row, ["MTD Depletion vs PY", "MTD Dip vs PY%"], 0));
 
       r["YTD_Sales"] = toNum(pick(row, ["YTD_Sales", "YTD Sales", "YTD Shipment", "YTD Sipm"], 0));
       r["YTD_Target"] = toNum(pick(row, ["YTD_Target", "YTD Target"], 0));
@@ -925,6 +1089,8 @@
 
       r["YTD_Depletion"] = toNum(pick(row, ["YTD_Depletion", "YTD Depletion", "YTD Dip"], 0));
       r["YTD Depletion Ach"] = toNum(pick(row, ["YTD Depletion Ach", "YTD Depletion vs Shipment", "YTD Dip Ach%"], 0));
+      r["YTD_Depletion_PY"] = toNum(pick(row, ["YTD_Depletion_PY", "YTD Depletion PY", "YTD Dip PY"], 0));
+      r["YTD Depletion vs PY"] = toNum(pick(row, ["YTD Depletion vs PY", "YTD Dip vs PY%"], 0));
 
       r["MTD_PY"] = toNum(pick(row, ["MTD_PY", "MTD PY", "MTD PY Shipment", "MTD Sipm PY"], 0));
       r["MTD Sales vs PY"] = toNum(pick(row, ["MTD Sales vs PY", "MTD_Sales_vs_PY", "MTD Sipm vs PY%"], 0));
@@ -982,7 +1148,10 @@
       if (!select) return;
 
       const options = forceFirst ? values : ["All", ...values];
-      const safeValue = options.includes(currentValue) ? currentValue : (options[0] || "All");
+      let safeValue = options.includes(currentValue) ? currentValue : (options[0] || "All");
+      if (selectId === "uomFilter" && options.includes("HL") && (!currentValue || currentValue === "All" || !options.includes(currentValue))) {
+        safeValue = "HL";
+      }
 
       select.innerHTML = options.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
       select.value = safeValue;
@@ -1034,33 +1203,44 @@
     }
 
     function updateCards(data) {
-      const mtdSales = sum(data, "MTD_Sales");
-      const ytdSales = sum(data, "YTD_Sales");
+      function setCard(valueId, achId, pyId, valueCol, targetCol, pyCol) {
+        const value = sum(data, valueCol);
+        const target = sum(data, targetCol);
+        const py = sum(data, pyCol);
+        const ach = target === 0 ? 0 : (value / target) - 1;
+        const growth = py === 0 ? 0 : (value / py) - 1;
+
+        if ($(valueId)) $(valueId).textContent = formatNumber(value);
+        if ($(achId)) $(achId).textContent = formatPct(ach);
+        if ($(pyId)) $(pyId).textContent = formatPct(growth);
+        setValueClass($(achId), ach);
+        setValueClass($(pyId), growth);
+      }
+
+      setCard("lastDaySalesCard", "lastDaySalesAchCard", "lastDaySalesPyCard", "Last_Day_Sales", "Last_Day_Target", "Last_Day_PY");
+      setCard("wtdSalesCard", "wtdSalesAchCard", "wtdSalesPyCard", "WTD_Sales", "WTD_Target", "WTD_PY");
+      setCard("mtdSalesCard", "mtdAchCard", "mtdSalesPyCard", "MTD_Sales", "MTD_Target", "MTD_PY");
+      setCard("ytdSalesCard", "ytdAchCard", "ytdSalesPyCard", "YTD_Sales", "YTD_Target", "YTD_PY");
+
+      setCard("lastDayDepletionCard", "lastDayDepletionAchCard", "lastDayDepletionPyCard", "Last_Day_Depletion", "Last_Day_Target", "Last_Day_Depletion_PY");
+      setCard("wtdDepletionCard", "wtdDepletionAchCard", "wtdDepletionPyCard", "WTD_Depletion", "WTD_Target", "WTD_Depletion_PY");
+      setCard("mtdDepletionCard", "mtdDepletionAchCard", "mtdDepletionPyCard", "MTD_Depletion", "MTD_Target", "MTD_Depletion_PY");
+      setCard("ytdDepletionCard", "ytdDepletionAchCard", "ytdDepletionPyCard", "YTD_Depletion", "YTD_Target", "YTD_Depletion_PY");
+
+      const beginningStock = sum(data, "Beginning_Stock");
+      const mtdShipment = sum(data, "MTD_Sales");
       const mtdDepletion = sum(data, "MTD_Depletion");
-      const ytdDepletion = sum(data, "YTD_Depletion");
+      const stockBalance = sum(data, "Stock_per_Agent");
+      const avgDailyDip = sum(data, "Avg_Daily_Depletion");
 
-      const mtdTarget = sum(data, "MTD_Target");
-      const ytdTarget = sum(data, "YTD_Target");
+      const stockDays = avgDailyDip === 0 ? 0 : stockBalance / avgDailyDip;
 
-      const mtdAch = mtdTarget === 0 ? 0 : (mtdSales / mtdTarget) - 1;
-      const ytdAch = ytdTarget === 0 ? 0 : (ytdSales / ytdTarget) - 1;
-      const mtdDepletionAch = mtdTarget === 0 ? 0 : (mtdDepletion / mtdTarget) - 1;
-      const ytdDepletionAch = ytdTarget === 0 ? 0 : (ytdDepletion / ytdTarget) - 1;
-
-      if ($("mtdSalesCard")) $("mtdSalesCard").textContent = formatNumber(mtdSales);
-      if ($("ytdSalesCard")) $("ytdSalesCard").textContent = formatNumber(ytdSales);
-      if ($("mtdDepletionCard")) $("mtdDepletionCard").textContent = formatNumber(mtdDepletion);
-      if ($("ytdDepletionCard")) $("ytdDepletionCard").textContent = formatNumber(ytdDepletion);
-
-      if ($("mtdAchCard")) $("mtdAchCard").textContent = formatPct(mtdAch);
-      if ($("ytdAchCard")) $("ytdAchCard").textContent = formatPct(ytdAch);
-      if ($("mtdDepletionAchCard")) $("mtdDepletionAchCard").textContent = formatPct(mtdDepletionAch);
-      if ($("ytdDepletionAchCard")) $("ytdDepletionAchCard").textContent = formatPct(ytdDepletionAch);
-
-      setValueClass($("mtdAchCard"), mtdAch);
-      setValueClass($("ytdAchCard"), ytdAch);
-      setValueClass($("mtdDepletionAchCard"), mtdDepletionAch);
-      setValueClass($("ytdDepletionAchCard"), ytdDepletionAch);
+      if ($("stockDaysCard")) $("stockDaysCard").textContent = formatNumber(stockDays, 1);
+      if ($("stockBeginningCard")) $("stockBeginningCard").textContent = formatNumber(beginningStock);
+      if ($("stockMtdShipmentCard")) $("stockMtdShipmentCard").textContent = formatNumber(mtdShipment);
+      if ($("stockMtdDepletionCard")) $("stockMtdDepletionCard").textContent = formatNumber(mtdDepletion);
+      if ($("stockCurrentCard")) $("stockCurrentCard").textContent = formatNumber(stockBalance);
+      if ($("stockAvgDailyDipCard")) $("stockAvgDailyDipCard").textContent = formatNumber(avgDailyDip, 1);
     }
 
     function calcPerformanceRows(data, groupCol, limit = null) {
@@ -1251,7 +1431,7 @@
 
     function isAchievementColumn(col) {
       const text = String(col || "").toLowerCase();
-      return text.includes("ach") || text.includes("vs py%");
+      return text.includes("ach") || text.includes("vs py");
     }
 
     function achClass(value) {
@@ -1269,12 +1449,77 @@
       return "none";
     }
 
+    
+    function stockFlagFromDays(days, avgDailyDepletion) {
+      if (!avgDailyDepletion || avgDailyDepletion <= 0) return "No Depletion";
+      if (days > 10) return "Over-stocked";
+      if (days >= 6) return "Optimal";
+      if (days < 6) return "Low Stock";
+      return "No Depletion";
+    }
+
+    function aggregateForAgentTable(data) {
+      const groups = new Map();
+      const keyCols = ["Division", "Agent", "Target Type"];
+
+      data.forEach(r => {
+        const key = keyCols.map(c => r[c] || "").join("||");
+
+        if (!groups.has(key)) {
+          const base = {};
+          keyCols.forEach(c => base[c] = r[c] || "");
+          numericCols.forEach(c => base[c] = 0);
+          base["Stock Level Flag"] = "";
+          groups.set(key, base);
+        }
+
+        const g = groups.get(key);
+        numericCols.forEach(c => {
+          // Achievement / growth columns are recalculated after summing numerator and denominator.
+          if (!percentCols.includes(c)) {
+            g[c] += toNum(r[c]);
+          }
+        });
+      });
+
+      const rows = Array.from(groups.values());
+
+      rows.forEach(g => {
+        g["Last Day Ach"] = g["Last_Day_Target"] === 0 ? 0 : (g["Last_Day_Sales"] / g["Last_Day_Target"]) - 1;
+        g["Last Day Sales vs PY"] = g["Last_Day_PY"] === 0 ? 0 : (g["Last_Day_Sales"] / g["Last_Day_PY"]) - 1;
+        g["Last Day Depletion Ach"] = g["Last_Day_Target"] === 0 ? 0 : (g["Last_Day_Depletion"] / g["Last_Day_Target"]) - 1;
+        g["Last Day Depletion vs PY"] = g["Last_Day_Depletion_PY"] === 0 ? 0 : (g["Last_Day_Depletion"] / g["Last_Day_Depletion_PY"]) - 1;
+
+        g["WTD Ach"] = g["WTD_Target"] === 0 ? 0 : (g["WTD_Sales"] / g["WTD_Target"]) - 1;
+        g["WTD Sales vs PY"] = g["WTD_PY"] === 0 ? 0 : (g["WTD_Sales"] / g["WTD_PY"]) - 1;
+        g["WTD Depletion Ach"] = g["WTD_Target"] === 0 ? 0 : (g["WTD_Depletion"] / g["WTD_Target"]) - 1;
+        g["WTD Depletion vs PY"] = g["WTD_Depletion_PY"] === 0 ? 0 : (g["WTD_Depletion"] / g["WTD_Depletion_PY"]) - 1;
+
+        g["MTD Ach"] = g["MTD_Target"] === 0 ? 0 : (g["MTD_Sales"] / g["MTD_Target"]) - 1;
+        g["MTD Sales vs PY"] = g["MTD_PY"] === 0 ? 0 : (g["MTD_Sales"] / g["MTD_PY"]) - 1;
+        g["MTD Depletion Ach"] = g["MTD_Target"] === 0 ? 0 : (g["MTD_Depletion"] / g["MTD_Target"]) - 1;
+        g["MTD Depletion vs PY"] = g["MTD_Depletion_PY"] === 0 ? 0 : (g["MTD_Depletion"] / g["MTD_Depletion_PY"]) - 1;
+
+        g["YTD Ach"] = g["YTD_Target"] === 0 ? 0 : (g["YTD_Sales"] / g["YTD_Target"]) - 1;
+        g["YTD VS PY Ach"] = g["YTD_PY"] === 0 ? 0 : (g["YTD_Sales"] / g["YTD_PY"]) - 1;
+        g["YTD Depletion Ach"] = g["YTD_Target"] === 0 ? 0 : (g["YTD_Depletion"] / g["YTD_Target"]) - 1;
+        g["YTD Depletion vs PY"] = g["YTD_Depletion_PY"] === 0 ? 0 : (g["YTD_Depletion"] / g["YTD_Depletion_PY"]) - 1;
+
+        g["Days of Stock"] = g["Avg_Daily_Depletion"] === 0 ? 0 : g["Stock_per_Agent"] / g["Avg_Daily_Depletion"];
+        g["Stock Level Flag"] = stockFlagFromDays(g["Days of Stock"], g["Avg_Daily_Depletion"]);
+      });
+
+      return rows.sort((a, b) => toNum(b["MTD_Sales"]) - toNum(a["MTD_Sales"]));
+    }
+
+
     function renderTable(data) {
       const search = $("tableSearch") ? $("tableSearch").value.trim().toLowerCase() : "";
+      let view = aggregateForAgentTable(data);
 
-      let view = data.filter(r => {
+      view = view.filter(r => {
         if (!search) return true;
-        return ["Division", "Agent", "Brand", "UOM", "Target Type", "Stock Level Flag"]
+        return ["Division", "Agent", "Target Type", "Stock Level Flag"]
           .some(col => String(r[col] || "").toLowerCase().includes(search));
       });
 
@@ -1289,7 +1534,9 @@
         });
       }
 
-      const cols = preferredCols.filter(c => rawData.length && c in rawData[0]);
+      // Detailed report is compiled at Agent level, so Brand is intentionally removed.
+      const agentLevelCols = preferredCols.filter(c => c !== "Brand" && c !== "UOM");
+      const cols = agentLevelCols.filter(c => rawData.length && c in rawData[0]);
       const table = $("dataTable");
       if (!table) return;
 
