@@ -1719,6 +1719,33 @@ print("Remaining working days in month:", remaining_working_days)
 print("Elapsed working days in year:", elapsed_year_working_days)
 print("Remaining working days in year:", remaining_year_working_days)
 
+# Stock days / Avg Daily Depletion must use Calendar MDM working days only.
+# Calendar source:
+#   File  : Calander MDM.xlsx
+#   Sheet : Calander_2026
+#   Logic : Date <= Last Shipment Date and Working Day = Yes
+stock_avg_depletion_working_days = elapsed_working_days
+
+stock_avg_depletion_calendar_check = calendar_work[
+    (calendar_work[calendar_date_col] >= CURRENT_MONTH_START) &
+    (calendar_work[calendar_date_col] <= LAST_SHIPMENT_DATE)
+].copy()
+
+print("=" * 120)
+print("STOCK AVG DEPLETION WORKING DAY CHECK")
+print("=" * 120)
+print("Calendar file used:", files["calendar_mdm"])
+print("Calendar sheet used:", sheets["calendar_mdm"])
+print("Calendar date column used:", calendar_date_col)
+print("Calendar working-day column used:", working_day_col)
+print("Working-day value required: Yes")
+print("Stock Avg Depletion Days Used:", stock_avg_depletion_working_days)
+display(
+    stock_avg_depletion_calendar_check[
+        [calendar_date_col, working_day_col, "Is Working Day"]
+    ]
+)
+
 
 # ==================================================================================================
 # 2. STANDARD KEYS AND SAFE CALCULATION HELPERS
@@ -2712,18 +2739,55 @@ display(period_merge_check)
 # 10. CALCULATED KPIs
 # ==================================================================================================
 
-final_kpi_wide["Stock_Balance"] = (
+# --------------------------------------------------------------------------------------------------
+# STOCK LOGIC
+# --------------------------------------------------------------------------------------------------
+# Rolling Stock Raw = Beginning Stock + MTD Shipment - MTD Depletion.
+# Business rule from stock sheet:
+# - If Rolling Stock is negative for a brand/agent, it is NOT considered in the total stock balance.
+# - Depletion still stays in Avg Daily Depletion.
+# Example:
+#   Habesha 15,528 + Kidame -15 + Negus 2,926 + Feta 23
+#   Total Stock Balance = 15,528 + 0 + 2,926 + 23 = 18,477
+# --------------------------------------------------------------------------------------------------
+
+final_kpi_wide["Rolling_Stock_Raw"] = (
     final_kpi_wide["Beginning_Stock"] +
     final_kpi_wide["MTD_Shipment"] -
     final_kpi_wide["MTD_Depletion"]
-).clip(lower=0)
+)
 
-final_kpi_wide["Avg_Daily_Depletion"] = final_kpi_wide["MTD_Depletion"] / elapsed_calendar_days
+final_kpi_wide["Negative_Rolling_Stock_Excluded"] = np.where(
+    final_kpi_wide["Rolling_Stock_Raw"] < 0,
+    final_kpi_wide["Rolling_Stock_Raw"],
+    0
+)
+
+final_kpi_wide["Stock_Balance"] = np.where(
+    final_kpi_wide["Rolling_Stock_Raw"] > 0,
+    final_kpi_wide["Rolling_Stock_Raw"],
+    0
+)
+
+final_kpi_wide["Avg_Daily_Depletion"] = final_kpi_wide["MTD_Depletion"] / stock_avg_depletion_working_days
 
 final_kpi_wide["Days_of_Stock"] = safe_divide(
     final_kpi_wide["Stock_Balance"],
     final_kpi_wide["Avg_Daily_Depletion"]
 )
+
+stock_negative_check_wide = (
+    final_kpi_wide[final_kpi_wide["Rolling_Stock_Raw"] < 0]
+    [["Division", "Agent", "Brand", "Beginning_Stock", "MTD_Shipment", "MTD_Depletion", "Rolling_Stock_Raw"]]
+    .copy()
+)
+
+print("=" * 120)
+print("NEGATIVE ROLLING STOCK EXCLUSION CHECK - FINAL_KPI_WIDE")
+print("=" * 120)
+print("Negative rolling stock rows excluded from total stock balance:", stock_negative_check_wide.shape[0])
+if not stock_negative_check_wide.empty:
+    display(stock_negative_check_wide)
 
 final_kpi_wide["Avg_Daily_MTD_Shipment"] = final_kpi_wide["MTD_Shipment"] / elapsed_working_days
 
@@ -2784,6 +2848,8 @@ final_kpi_wide = final_kpi_wide.rename(columns={
     "MTD_PY_Shipment": "MTD PY Shipment",
     "MTD_Depletion": "MTD Depletion",
     "Stock_Balance": "Stock Balance",
+    "Rolling_Stock_Raw": "Rolling Stock Raw",
+    "Negative_Rolling_Stock_Excluded": "Negative Rolling Stock Excluded",
     "Avg_Daily_Depletion": "Avg Daily Depletion",
     "Days_of_Stock": "Days of Stock",
     "MTD_Landing": "MTD Landing",
@@ -2868,6 +2934,8 @@ final_columns = [
     "MTD Depletion",
     "Beginning Stock",
     "Stock Balance",
+    "Rolling Stock Raw",
+    "Negative Rolling Stock Excluded",
     "Avg Daily Depletion",
     "Days of Stock",
     "MTD Landing",
@@ -2997,6 +3065,8 @@ volume_cols_for_uom = [
     "MTD Depletion",
     "YTD PY Depletion",
     "Stock Balance",
+    "Rolling Stock Raw",
+    "Negative Rolling Stock Excluded",
     "Avg Daily Depletion",
     "MTD Landing",
     "MTD Target AOP",
@@ -3136,7 +3206,7 @@ display(missing_division_check[["Division", "Agent", "Brand", "UOM"]].drop_dupli
 #
 # Important stock logic:
 #   Stock_per_Agent = Stock Balance
-#   Avg_Daily_Depletion = MTD Depletion / elapsed calendar days
+#   Avg_Daily_Depletion = MTD Depletion / elapsed working days from Calendar MDM where Working Day = Yes
 #   Days of Stock = Stock_per_Agent / Avg_Daily_Depletion
 #
 # This section avoids reverse-calculating Avg Daily Depletion from Days Stock.
@@ -3178,6 +3248,20 @@ backend_kpi_report = ensure_backend_col(
     backend_kpi_report,
     "Stock Balance",
     ["Stock Balance", "Stock_Balance"],
+    0
+)
+
+backend_kpi_report = ensure_backend_col(
+    backend_kpi_report,
+    "Rolling Stock Raw",
+    ["Rolling Stock Raw", "Rolling_Stock_Raw"],
+    0
+)
+
+backend_kpi_report = ensure_backend_col(
+    backend_kpi_report,
+    "Negative Rolling Stock Excluded",
+    ["Negative Rolling Stock Excluded", "Negative_Rolling_Stock_Excluded"],
     0
 )
 
@@ -3270,6 +3354,8 @@ required_final_base_cols = [
     "YTD PY Shipment",
     "Beginning Stock",
     "Stock Balance",
+    "Rolling Stock Raw",
+    "Negative Rolling Stock Excluded",
     "Avg Daily Depletion",
 ]
 
@@ -3303,6 +3389,8 @@ numeric_backend_cols = [
     "YTD PY Shipment",
     "Beginning Stock",
     "Stock Balance",
+    "Rolling Stock Raw",
+    "Negative Rolling Stock Excluded",
     "Avg Daily Depletion",
     "MTD Target Sales",
     "YTD Target Sales",
@@ -3384,6 +3472,8 @@ for uom_value in sorted(backend_kpi_report["UOM"].dropna().unique()):
                 YTD_PY=("YTD PY Shipment", "sum"),
                 YTD_Depletion_PY=("YTD PY Depletion", "sum"),
                 Beginning_Stock=("Beginning Stock", "sum"),
+                Rolling_Stock_Raw=("Rolling Stock Raw", "sum"),
+                Negative_Rolling_Stock_Excluded=("Negative Rolling Stock Excluded", "sum"),
                 Stock_per_Agent=("Stock Balance", "sum"),
                 Avg_Daily_Depletion=("Avg Daily Depletion", "sum")
             )
@@ -3587,6 +3677,8 @@ final_kpi_report = (
         YTD_PY=("YTD_PY", "sum"),
         YTD_Depletion_PY=("YTD_Depletion_PY", "sum"),
         Beginning_Stock=("Beginning_Stock", "sum"),
+        Rolling_Stock_Raw=("Rolling_Stock_Raw", "sum"),
+        Negative_Rolling_Stock_Excluded=("Negative_Rolling_Stock_Excluded", "sum"),
         Stock_per_Agent=("Stock_per_Agent", "sum"),
         Avg_Daily_Depletion=("Avg_Daily_Depletion", "sum")
     )
@@ -3653,18 +3745,33 @@ final_kpi_report["Beginning_Stock"] = pd.to_numeric(
 
 final_kpi_report = final_kpi_report.drop(columns=["Beginning_Stock_Exact"], errors="ignore")
 
-# Recalculate stock balance using exact beginning stock.
-final_kpi_report["Stock_per_Agent"] = (
+# Recalculate rolling stock using exact beginning stock.
+# Negative rolling stock is excluded from stock total by converting it to 0 in Stock_per_Agent.
+final_kpi_report["Rolling_Stock_Raw"] = (
     final_kpi_report["Beginning_Stock"] +
     pd.to_numeric(final_kpi_report["MTD_Sales"], errors="coerce").fillna(0) -
     pd.to_numeric(final_kpi_report["MTD_Depletion"], errors="coerce").fillna(0)
-).clip(lower=0)
+)
+
+final_kpi_report["Negative_Rolling_Stock_Excluded"] = np.where(
+    final_kpi_report["Rolling_Stock_Raw"] < 0,
+    final_kpi_report["Rolling_Stock_Raw"],
+    0
+)
+
+final_kpi_report["Stock_per_Agent"] = np.where(
+    final_kpi_report["Rolling_Stock_Raw"] > 0,
+    final_kpi_report["Rolling_Stock_Raw"],
+    0
+)
 
 after_stock_total_check = (
     final_kpi_report
     .groupby("UOM", dropna=False)
     .agg(
         Beginning_Stock_After=("Beginning_Stock", "sum"),
+        Rolling_Stock_Raw_After=("Rolling_Stock_Raw", "sum"),
+        Negative_Rolling_Stock_Excluded=("Negative_Rolling_Stock_Excluded", "sum"),
         Stock_Balance_After=("Stock_per_Agent", "sum"),
         MTD_Sales=("MTD_Sales", "sum"),
         MTD_Depletion=("MTD_Depletion", "sum")
@@ -3827,6 +3934,8 @@ final_kpi_report = final_kpi_report[
         "YTD_Depletion_PY",
         "YTD Depletion vs PY",
         "Beginning_Stock",
+        "Rolling_Stock_Raw",
+        "Negative_Rolling_Stock_Excluded",
         "Stock_per_Agent",
         "Avg_Daily_Depletion",
         "Days of Stock",
@@ -3871,6 +3980,8 @@ number_cols_final = [
     "YTD_PY",
     "YTD_Depletion_PY",
     "Beginning_Stock",
+    "Rolling_Stock_Raw",
+    "Negative_Rolling_Stock_Excluded",
     "Stock_per_Agent",
     "Avg_Daily_Depletion",
     "Days of Stock"
@@ -3938,6 +4049,8 @@ final_total_check = (
         MTD_PY=("MTD_PY", "sum"),
         YTD_PY=("YTD_PY", "sum"),
         Beginning_Stock=("Beginning_Stock", "sum"),
+        Rolling_Stock_Raw=("Rolling_Stock_Raw", "sum"),
+        Negative_Rolling_Stock_Excluded=("Negative_Rolling_Stock_Excluded", "sum"),
         Stock_per_Agent=("Stock_per_Agent", "sum"),
         Avg_Daily_Depletion=("Avg_Daily_Depletion", "sum")
     )
@@ -3975,6 +4088,8 @@ for col in [
     "MTD_PY",
     "YTD_PY",
     "Beginning_Stock",
+    "Rolling_Stock_Raw",
+    "Negative_Rolling_Stock_Excluded",
     "Stock_per_Agent",
     "Avg_Daily_Depletion",
     "Days of Stock"
@@ -3999,6 +4114,13 @@ print("=" * 120)
 print("FINAL EXTRACT TOTAL CHECK BY UOM AND TARGET TYPE")
 print("=" * 120)
 display(final_total_check_display)
+
+print("=" * 120)
+print("STOCK DAYS FORMULA CHECK")
+print("=" * 120)
+print("Avg Daily Depletion denominator used:", stock_avg_depletion_working_days, "working days")
+print("Formula: Avg_Daily_Depletion = MTD_Depletion / working days from Calendar MDM where Working Day = Yes")
+print("Formula: Days of Stock = Stock_per_Agent / Avg_Daily_Depletion")
 
 final_stock_check = (
     final_kpi_report
@@ -4066,3 +4188,4 @@ print("Reminder: Filter UOM and Target Type before checking totals.")
 print("Reminder: Days of Stock = Stock_per_Agent / Avg_Daily_Depletion.")
 
 # %%
+
