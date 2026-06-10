@@ -836,6 +836,139 @@
       border-left: 14px solid #d6b24a !important;
     }
 
+  
+    /* Mobile detailed table fix */
+    @media (max-width: 768px) {
+      .table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      #dataTable th.sticky-col,
+      #dataTable td.sticky-col,
+      #dataTable th.sticky-col-1,
+      #dataTable td.sticky-col-1,
+      #dataTable th.sticky-col-2,
+      #dataTable td.sticky-col-2 {
+        position: static !important;
+        left: auto !important;
+        min-width: 92px !important;
+        max-width: none !important;
+        box-shadow: none !important;
+      }
+
+      #dataTable th[data-col="Division"],
+      #dataTable td[data-col="Division"] {
+        min-width: 90px !important;
+      }
+
+      #dataTable th[data-col="Agent"],
+      #dataTable td[data-col="Agent"] {
+        min-width: 155px !important;
+      }
+
+      #dataTable th,
+      #dataTable td {
+        font-size: 0.68rem;
+        padding: 7px 6px;
+        min-width: 76px;
+      }
+
+      #dataTable th.section-start,
+      #dataTable td.section-start,
+      table th.kpi-section-start,
+      table td.kpi-section-start {
+        border-left-width: 8px !important;
+      }
+
+      .card,
+      .panel,
+      .section {
+        overflow-x: hidden;
+      }
+    }
+
+    @media (max-width: 480px) {
+      #dataTable th,
+      #dataTable td {
+        font-size: 0.62rem;
+        padding: 6px 5px;
+        min-width: 70px;
+      }
+
+      #dataTable th[data-col="Division"],
+      #dataTable td[data-col="Division"] {
+        min-width: 78px !important;
+      }
+
+      #dataTable th[data-col="Agent"],
+      #dataTable td[data-col="Agent"] {
+        min-width: 135px !important;
+      }
+    }
+
+  
+    /* Fix first column in Regional and Brand performance tables */
+    #regionalTable th:first-child,
+    #regionalTable td:first-child,
+    #brandRegionPerformanceTable th:first-child,
+    #brandRegionPerformanceTable td:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 4;
+      background: #fffdf7;
+      box-shadow: 8px 0 10px rgba(80, 55, 5, 0.08);
+      min-width: 150px;
+      max-width: 210px;
+    }
+
+    #regionalTable th:first-child,
+    #brandRegionPerformanceTable th:first-child {
+      z-index: 7;
+      background: #fff4cf;
+    }
+
+    #regionalTable td:first-child,
+    #brandRegionPerformanceTable td:first-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 700;
+    }
+
+    @media (max-width: 768px) {
+      #regionalTable th:first-child,
+      #regionalTable td:first-child,
+      #brandRegionPerformanceTable th:first-child,
+      #brandRegionPerformanceTable td:first-child {
+        position: sticky !important;
+        left: 0 !important;
+        min-width: 120px !important;
+        max-width: 120px !important;
+        font-size: 0.68rem;
+      }
+
+      #regionalTable th,
+      #regionalTable td,
+      #brandRegionPerformanceTable th,
+      #brandRegionPerformanceTable td {
+        font-size: 0.66rem;
+        padding: 7px 6px;
+        min-width: 72px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      #regionalTable th:first-child,
+      #regionalTable td:first-child,
+      #brandRegionPerformanceTable th:first-child,
+      #brandRegionPerformanceTable td:first-child {
+        min-width: 105px !important;
+        max-width: 105px !important;
+        font-size: 0.62rem;
+      }
+    }
+
   </style>
 </head>
 
