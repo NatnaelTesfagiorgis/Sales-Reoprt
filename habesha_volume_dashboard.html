@@ -673,6 +673,169 @@
       font-weight: 800;
     }
 
+  
+    /* Detailed Report readability updates */
+    .table-wrap {
+      position: relative;
+    }
+
+    #dataTable th.sticky-col,
+    #dataTable td.sticky-col {
+      position: sticky;
+      background: #fffdf7;
+      z-index: 3;
+    }
+
+    #dataTable th.sticky-col {
+      background: #fff4cf;
+      z-index: 6;
+    }
+
+    #dataTable th.sticky-col-1,
+    #dataTable td.sticky-col-1 {
+      left: 0;
+      min-width: 125px;
+      max-width: 125px;
+    }
+
+    #dataTable th.sticky-col-2,
+    #dataTable td.sticky-col-2 {
+      left: 125px;
+      min-width: 230px;
+      max-width: 230px;
+      box-shadow: 8px 0 10px rgba(80, 55, 5, 0.08);
+    }
+
+    #dataTable td.sticky-col {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #dataTable tr:hover td.sticky-col {
+      background: #fffaf0;
+    }
+
+    #dataTable th.section-start,
+    #dataTable td.section-start {
+      border-left: 14px solid #d6b24a;
+    }
+
+    #dataTable th.section-start {
+      box-shadow: inset 1px 0 0 #8a6a14;
+    }
+
+    #dataTable td.section-start {
+      box-shadow: inset 1px 0 0 #a8841f;
+    }
+
+  
+    /* KPI section spacing and improved table headers */
+    table th {
+      white-space: normal;
+      line-height: 1.15;
+      vertical-align: middle;
+      min-width: 82px;
+      padding: 10px 9px;
+    }
+
+    table td {
+      padding: 9px 9px;
+      vertical-align: middle;
+    }
+
+    table th.ach-col {
+      min-width: 74px;
+    }
+
+    table th.kpi-section-start,
+    table td.kpi-section-start {
+      border-left: 14px solid #d6b24a;
+    }
+
+    table th.kpi-section-start {
+      box-shadow: inset 1px 0 0 #8a6a14;
+    }
+
+    table td.kpi-section-start {
+      box-shadow: inset 1px 0 0 #a8841f;
+    }
+
+    .mini-table th,
+    .mini-table td {
+      white-space: normal;
+      line-height: 1.15;
+      padding: 8px 8px;
+    }
+
+    .mini-table th:first-child,
+    .mini-table td:first-child {
+      min-width: 145px;
+      max-width: 220px;
+    }
+
+    #dataTable th {
+      min-width: 96px;
+    }
+
+    #dataTable th.sticky-col-1,
+    #dataTable td.sticky-col-1 {
+      min-width: 135px;
+      max-width: 135px;
+    }
+
+    #dataTable th.sticky-col-2,
+    #dataTable td.sticky-col-2 {
+      left: 135px;
+      min-width: 250px;
+      max-width: 250px;
+    }
+
+    #dataTable th[data-col="Target Type"],
+    #dataTable td[data-col="Target Type"] {
+      min-width: 95px;
+    }
+
+    #dataTable th[data-col="Stock Level Flag"],
+    #dataTable td[data-col="Stock Level Flag"] {
+      min-width: 120px;
+    }
+
+  
+    /* Darker KPI section separators */
+    table th.kpi-section-start,
+    table td.kpi-section-start,
+    #dataTable th.section-start,
+    #dataTable td.section-start {
+      border-left: 14px solid #d6b24a !important;
+    }
+
+    table th.kpi-section-start,
+    #dataTable th.section-start {
+      box-shadow: inset 1px 0 0 #8a6a14 !important;
+    }
+
+    table td.kpi-section-start,
+    #dataTable td.section-start {
+      box-shadow: inset 1px 0 0 #a8841f !important;
+    }
+
+  
+    /* Target-first KPI table layout */
+    .mini-table th,
+    .mini-table td {
+      min-width: 76px;
+    }
+
+    .mini-table th:first-child,
+    .mini-table td:first-child {
+      min-width: 150px;
+    }
+
+    .mini-table th.kpi-section-start,
+    .mini-table td.kpi-section-start {
+      border-left: 14px solid #d6b24a !important;
+    }
+
   </style>
 </head>
 
@@ -892,15 +1055,21 @@
 
     const preferredCols = [
       "Division", "Agent", "Brand", "UOM", "Target Type",
-      "Last_Day_Sales", "Last_Day_Target", "Last Day Ach", "Last_Day_PY", "Last Day Sales vs PY",
-      "Last_Day_Depletion", "Last Day Depletion Ach", "Last_Day_Depletion_PY", "Last Day Depletion vs PY",
-      "WTD_Sales", "WTD_Target", "WTD Ach", "WTD_PY", "WTD Sales vs PY",
-      "WTD_Depletion", "WTD Depletion Ach", "WTD_Depletion_PY", "WTD Depletion vs PY",
-      "MTD_Sales", "MTD_Target", "MTD Ach", "MTD_PY", "MTD Sales vs PY",
+
+      "Last_Day_Target", "Last_Day_Sales", "Last Day Ach",
+      "Last_Day_Depletion", "Last Day Depletion Ach",
+
+      "WTD_Target", "WTD_Sales", "WTD Ach",
+      "WTD_Depletion", "WTD Depletion Ach",
+
+      "MTD_Target", "MTD_Sales", "MTD Ach", "MTD_PY", "MTD Sales vs PY",
       "MTD_Depletion", "MTD Depletion Ach", "MTD_Depletion_PY", "MTD Depletion vs PY",
-      "YTD_Sales", "YTD_Target", "YTD Ach", "YTD_PY", "YTD VS PY Ach",
+
+      "YTD_Target", "YTD_Sales", "YTD Ach", "YTD_PY", "YTD VS PY Ach",
       "YTD_Depletion", "YTD Depletion Ach", "YTD_Depletion_PY", "YTD Depletion vs PY",
-      "Beginning_Stock", "Stock_per_Agent", "Avg_Daily_Depletion", "Days of Stock", "Stock Level Flag"
+
+      "Beginning_Stock", "Rolling_Stock_Raw", "Negative_Rolling_Stock_Excluded",
+      "Stock_per_Agent", "Avg_Daily_Depletion", "Days of Stock", "Stock Level Flag"
     ];
 
     function setStatus(message, type = "") {
@@ -1292,27 +1461,82 @@
         .map(r => ({...r, Brand: r.name}));
     }
 
-    function renderMiniPerformanceTable(tableId, rows, firstColName, mode = "regional") {
+    
+    function miniTableCellClass(col, index = 0) {
+      const classes = [];
+      // Add visual spacing between KPI groups in regional and brand performance visuals.
+      // Columns are: Name, MTD Sipm, Ach%, YTD Sipm, Ach%, MTD Dip, Ach%, YTD Dip, Ach%, Days Stock
+      if (["MTD Target", "YTD Target", "MTD Dip Target", "YTD Dip Target", "Days Stock"].includes(col)) {
+        classes.push("kpi-section-start");
+      }
+      if (isAchievementColumn(col)) classes.push("ach-col");
+      return classes.join(" ");
+    }
+
+    function shortHeaderName(col) {
+      const names = {
+        "MTD Target": "MTD<br>Target",
+        "MTD Sipm": "MTD<br>Ship.",
+        "YTD Target": "YTD<br>Target",
+        "YTD Sipm": "YTD<br>Ship.",
+        "MTD Dip Target": "MTD Depl.<br>Target",
+        "MTD Dip": "MTD<br>Depl.",
+        "YTD Dip Target": "YTD Depl.<br>Target",
+        "YTD Dip": "YTD<br>Depl.",
+        "Days Stock": "Days<br>Stock",
+        "Ach%": "Ach%",
+        "MTD_Sales": "MTD<br>Ship.",
+        "YTD_Sales": "YTD<br>Ship.",
+        "MTD_Depletion": "MTD<br>Depl.",
+        "YTD_Depletion": "YTD<br>Depl.",
+        "Last_Day_Sales": "Last Day<br>Ship.",
+        "Last_Day_Target": "Last Day<br>Target",
+        "Last_Day_Depletion": "Last Day<br>Depl.",
+        "WTD_Sales": "WTD<br>Ship.",
+        "WTD_Target": "WTD<br>Target",
+        "WTD_Depletion": "WTD<br>Depl.",
+        "MTD_Target": "MTD<br>Target",
+        "YTD_Target": "YTD<br>Target",
+        "MTD_PY": "MTD<br>PY Ship.",
+        "YTD_PY": "YTD<br>PY Ship.",
+        "MTD_Depletion_PY": "MTD<br>PY Depl.",
+        "YTD_Depletion_PY": "YTD<br>PY Depl.",
+        "Beginning_Stock": "Beginning<br>Stock",
+        "Rolling_Stock_Raw": "Rolling<br>Stock Raw",
+        "Negative_Rolling_Stock_Excluded": "Negative<br>Stock Excl.",
+        "Stock_per_Agent": "Stock<br>Balance",
+        "Avg_Daily_Depletion": "Avg Daily<br>Depl.",
+        "Days of Stock": "Days<br>Stock",
+        "Stock Level Flag": "Stock<br>Flag"
+      };
+      return names[col] || displayName(col);
+    }
+
+function renderMiniPerformanceTable(tableId, rows, firstColName, mode = "regional") {
       const table = $(tableId);
       if (!table) return;
 
       const cols = mode === "brand"
-        ? ["Brand", "MTD Sipm", "Ach%", "YTD Sipm", "Ach%", "MTD Dip", "Ach%", "YTD Dip", "Ach%"]
-        : [firstColName, "MTD Sipm", "Ach%", "YTD Sipm", "Ach%", "MTD Dip", "Ach%", "YTD Dip", "Ach%", "Days Stock"];
+        ? ["Brand", "MTD Target", "MTD Sipm", "Ach%", "YTD Target", "YTD Sipm", "Ach%", "MTD Dip Target", "MTD Dip", "Ach%", "YTD Dip Target", "YTD Dip", "Ach%"]
+        : [firstColName, "MTD Target", "MTD Sipm", "Ach%", "YTD Target", "YTD Sipm", "Ach%", "MTD Dip Target", "MTD Dip", "Ach%", "YTD Dip Target", "YTD Dip", "Ach%", "Days Stock"];
 
-      table.querySelector("thead").innerHTML = `<tr>${cols.map(c => `<th class="${isAchievementColumn(c) ? "ach-col" : ""}">${escapeHtml(c)}</th>`).join("")}</tr>`;
+      table.querySelector("thead").innerHTML = `<tr>${cols.map((c, i) => `<th class="${miniTableCellClass(c, i)}">${shortHeaderName(c)}</th>`).join("")}</tr>`;
 
       table.querySelector("tbody").innerHTML = rows.map(r => {
         if (mode === "brand") {
           return `
             <tr>
               <td>${escapeHtml(r.Brand)}</td>
+              <td class="kpi-section-start">${formatNumber(r.MTD_Target)}</td>
               <td>${formatNumber(r.MTD_Sales)}</td>
               <td class="ach-cell ${achClass(r["MTD Ach"])}">${formatPct(r["MTD Ach"])}</td>
+              <td class="kpi-section-start">${formatNumber(r.YTD_Target)}</td>
               <td>${formatNumber(r.YTD_Sales)}</td>
               <td class="ach-cell ${achClass(r["YTD Ach"])}">${formatPct(r["YTD Ach"])}</td>
+              <td class="kpi-section-start">${formatNumber(r.MTD_Target)}</td>
               <td>${formatNumber(r.MTD_Depletion)}</td>
               <td class="ach-cell ${achClass(r["MTD Depletion Ach"])}">${formatPct(r["MTD Depletion Ach"])}</td>
+              <td class="kpi-section-start">${formatNumber(r.YTD_Target)}</td>
               <td>${formatNumber(r.YTD_Depletion)}</td>
               <td class="ach-cell ${achClass(r["YTD Depletion Ach"])}">${formatPct(r["YTD Depletion Ach"])}</td>
             </tr>
@@ -1322,15 +1546,19 @@
         return `
           <tr>
             <td>${escapeHtml(r.name)}</td>
+            <td class="kpi-section-start">${formatNumber(r.MTD_Target)}</td>
             <td>${formatNumber(r.MTD_Sales)}</td>
             <td class="ach-cell ${achClass(r["MTD Ach"])}">${formatPct(r["MTD Ach"])}</td>
+            <td class="kpi-section-start">${formatNumber(r.YTD_Target)}</td>
             <td>${formatNumber(r.YTD_Sales)}</td>
             <td class="ach-cell ${achClass(r["YTD Ach"])}">${formatPct(r["YTD Ach"])}</td>
+            <td class="kpi-section-start">${formatNumber(r.MTD_Target)}</td>
             <td>${formatNumber(r.MTD_Depletion)}</td>
             <td class="ach-cell ${achClass(r["MTD Depletion Ach"])}">${formatPct(r["MTD Depletion Ach"])}</td>
+            <td class="kpi-section-start">${formatNumber(r.YTD_Target)}</td>
             <td>${formatNumber(r.YTD_Depletion)}</td>
             <td class="ach-cell ${achClass(r["YTD Depletion Ach"])}">${formatPct(r["YTD Depletion Ach"])}</td>
-            <td>${formatNumber(r["Days of Stock"], 1)}</td>
+            <td class="kpi-section-start">${formatNumber(r["Days of Stock"], 1)}</td>
           </tr>
         `;
       }).join("");
@@ -1513,7 +1741,30 @@
     }
 
 
-    function renderTable(data) {
+    
+    function tableCellClass(col) {
+      const classes = [];
+
+      if (col === "Division") classes.push("sticky-col", "sticky-col-1");
+      if (col === "Agent") classes.push("sticky-col", "sticky-col-2");
+
+      // Add visual spacing between Last Day, WTD, MTD, YTD, and Stock sections.
+      if ([
+        "Last_Day_Target",
+        "WTD_Target",
+        "MTD_Target",
+        "YTD_Target",
+        "Beginning_Stock"
+      ].includes(col)) {
+        classes.push("section-start");
+      }
+
+      if (isAchievementColumn(col)) classes.push("ach-col");
+
+      return classes.join(" ");
+    }
+
+function renderTable(data) {
       const search = $("tableSearch") ? $("tableSearch").value.trim().toLowerCase() : "";
       let view = aggregateForAgentTable(data);
 
@@ -1534,30 +1785,48 @@
         });
       }
 
-      // Detailed report is compiled at Agent level, so Brand is intentionally removed.
-      const agentLevelCols = preferredCols.filter(c => c !== "Brand" && c !== "UOM");
+      // Detailed report is compiled at Agent level, so Brand and UOM are intentionally removed.
+      // Last Day and WTD are not compared vs PY in the detailed table.
+      // MTD and YTD PY comparison columns are kept.
+      const detailedExcludedCols = new Set([
+        "Last_Day_PY",
+        "Last Day Sales vs PY",
+        "Last_Day_Depletion_PY",
+        "Last Day Depletion vs PY",
+        "WTD_PY",
+        "WTD Sales vs PY",
+        "WTD_Depletion_PY",
+        "WTD Depletion vs PY"
+      ]);
+
+      const agentLevelCols = preferredCols.filter(c =>
+        c !== "Brand" &&
+        c !== "UOM" &&
+        !detailedExcludedCols.has(c)
+      );
       const cols = agentLevelCols.filter(c => rawData.length && c in rawData[0]);
       const table = $("dataTable");
       if (!table) return;
 
-      table.querySelector("thead").innerHTML = `<tr>${cols.map(c => `<th data-col="${escapeHtml(c)}" class="${isAchievementColumn(c) ? "ach-col" : ""}">${escapeHtml(displayName(c))}</th>`).join("")}</tr>`;
+      table.querySelector("thead").innerHTML = `<tr>${cols.map(c => `<th data-col="${escapeHtml(c)}" class="${tableCellClass(c)}">${shortHeaderName(c)}</th>`).join("")}</tr>`;
 
       table.querySelector("tbody").innerHTML = view.slice(0, 500).map(row => {
         return `<tr>${cols.map(col => {
           let val = row[col];
+          const cls = tableCellClass(col);
           if (percentCols.includes(col)) val = formatPct(toNum(val));
           else if (numericCols.includes(col)) val = formatNumber(toNum(val), col === "Days of Stock" ? 1 : 2);
           else val = escapeHtml(val);
 
           if (col === "Stock Level Flag") {
-            return `<td><span class="flag ${flagClass(row[col])}">${escapeHtml(row[col])}</span></td>`;
+            return `<td class="${cls}"><span class="flag ${flagClass(row[col])}">${escapeHtml(row[col])}</span></td>`;
           }
 
           if (isAchievementColumn(col)) {
-            return `<td class="ach-cell ${achClass(row[col])}">${val}</td>`;
+            return `<td class="${cls} ach-cell ${achClass(row[col])}">${val}</td>`;
           }
 
-          return `<td>${val}</td>`;
+          return `<td class="${cls}">${val}</td>`;
         }).join("")}</tr>`;
       }).join("");
 
