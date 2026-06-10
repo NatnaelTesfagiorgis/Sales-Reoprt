@@ -969,6 +969,123 @@
       }
     }
 
+  
+    /* Restore usable fixed Division + Agent in Detailed Performance table */
+    #dataTable th.sticky-col,
+    #dataTable td.sticky-col {
+      position: sticky;
+      background: #fffdf7;
+      z-index: 5;
+    }
+
+    #dataTable th.sticky-col {
+      background: #fff4cf;
+      z-index: 8;
+    }
+
+    #dataTable th.sticky-col-1,
+    #dataTable td.sticky-col-1 {
+      left: 0;
+      min-width: 115px;
+      max-width: 115px;
+    }
+
+    #dataTable th.sticky-col-2,
+    #dataTable td.sticky-col-2 {
+      left: 115px;
+      min-width: 205px;
+      max-width: 205px;
+      box-shadow: 8px 0 10px rgba(80, 55, 5, 0.16);
+    }
+
+    #dataTable td.sticky-col {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 700;
+    }
+
+    @media (max-width: 768px) {
+      #dataTable th.sticky-col,
+      #dataTable td.sticky-col {
+        position: sticky !important;
+        background: #fffdf7 !important;
+        z-index: 5 !important;
+      }
+
+      #dataTable th.sticky-col {
+        background: #fff4cf !important;
+        z-index: 8 !important;
+      }
+
+      #dataTable th.sticky-col-1,
+      #dataTable td.sticky-col-1,
+      #dataTable th[data-col="Division"],
+      #dataTable td[data-col="Division"] {
+        left: 0 !important;
+        min-width: 68px !important;
+        max-width: 68px !important;
+        width: 68px !important;
+      }
+
+      #dataTable th.sticky-col-2,
+      #dataTable td.sticky-col-2,
+      #dataTable th[data-col="Agent"],
+      #dataTable td[data-col="Agent"] {
+        left: 68px !important;
+        min-width: 118px !important;
+        max-width: 118px !important;
+        width: 118px !important;
+        box-shadow: 8px 0 10px rgba(80, 55, 5, 0.18) !important;
+      }
+
+      #dataTable th,
+      #dataTable td {
+        font-size: 0.64rem;
+        padding: 6px 5px;
+        min-width: 68px;
+      }
+
+      #dataTable td.sticky-col {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+
+    @media (max-width: 480px) {
+      #dataTable th.sticky-col-1,
+      #dataTable td.sticky-col-1,
+      #dataTable th[data-col="Division"],
+      #dataTable td[data-col="Division"] {
+        min-width: 58px !important;
+        max-width: 58px !important;
+        width: 58px !important;
+      }
+
+      #dataTable th.sticky-col-2,
+      #dataTable td.sticky-col-2,
+      #dataTable th[data-col="Agent"],
+      #dataTable td[data-col="Agent"] {
+        left: 58px !important;
+        min-width: 108px !important;
+        max-width: 108px !important;
+        width: 108px !important;
+      }
+
+      #dataTable th,
+      #dataTable td {
+        font-size: 0.58rem;
+        padding: 5px 4px;
+        min-width: 62px;
+      }
+
+      #dataTable th.section-start,
+      #dataTable td.section-start {
+        border-left-width: 6px !important;
+      }
+    }
+
   </style>
 </head>
 
