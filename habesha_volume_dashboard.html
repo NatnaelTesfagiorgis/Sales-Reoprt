@@ -1086,6 +1086,98 @@
       }
     }
 
+  
+    /* Closed month performance tables */
+    .closed-month-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.35fr;
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .closed-month-panel {
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 16px;
+      background: white;
+      box-shadow: 0 8px 20px rgba(90, 70, 20, 0.07);
+      min-height: 320px;
+      overflow: hidden;
+    }
+
+    .closed-month-wrap {
+      overflow: auto;
+      max-height: 315px;
+      border: 1px solid #f0ead9;
+      border-radius: 14px;
+    }
+
+    #closedRegionTable th,
+    #closedRegionTable td,
+    #closedAgentTable th,
+    #closedAgentTable td {
+      font-size: 12px;
+      padding: 8px 8px;
+      white-space: nowrap;
+    }
+
+    #closedRegionTable th,
+    #closedAgentTable th {
+      background: #fff4cf;
+      white-space: normal !important;
+      line-height: 1.12;
+    }
+
+    #closedRegionTable th:first-child,
+    #closedRegionTable td:first-child,
+    #closedAgentTable th:first-child,
+    #closedAgentTable td:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 4;
+      background: #fffdf7;
+      box-shadow: 8px 0 10px rgba(80, 55, 5, 0.10);
+      font-weight: 800;
+    }
+
+    #closedRegionTable th:first-child,
+    #closedAgentTable th:first-child {
+      z-index: 7;
+      background: #fff4cf;
+    }
+
+    #closedAgentTable th:nth-child(2),
+    #closedAgentTable td:nth-child(2) {
+      position: sticky;
+      left: 70px;
+      z-index: 4;
+      background: #fffdf7;
+      box-shadow: 8px 0 10px rgba(80, 55, 5, 0.10);
+      font-weight: 800;
+      min-width: 130px;
+      max-width: 130px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #closedAgentTable th:nth-child(2) {
+      z-index: 7;
+      background: #fff4cf;
+    }
+
+    #closedRegionTable th.closed-section-start,
+    #closedRegionTable td.closed-section-start,
+    #closedAgentTable th.closed-section-start,
+    #closedAgentTable td.closed-section-start {
+      border-left: 10px solid #d6b24a;
+    }
+
+    @media (max-width: 900px) {
+      .closed-month-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
   </style>
 </head>
 
@@ -1231,6 +1323,34 @@
       </div>
     </section>
 
+    <section class="closed-month-grid">
+      <div class="closed-month-panel">
+        <div class="panel-header">
+          <h2>Closed Months by Region</h2>
+          <span class="hint">From final_kpi_report.csv | Target, actual, PY</span>
+        </div>
+        <div class="closed-month-wrap">
+          <table id="closedRegionTable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="closed-month-panel">
+        <div class="panel-header">
+          <h2>Closed Months by Agent</h2>
+          <span class="hint">From final_kpi_report.csv | Target, actual, PY</span>
+        </div>
+        <div class="closed-month-wrap">
+          <table id="closedAgentTable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
     <section class="grid">
       <div class="panel">
         <div class="panel-header">
@@ -1268,7 +1388,7 @@
     </section>
 
     <div class="footer">
-      Use final_kpi_report.csv. Filters are connected. The report starts with Regional Performance, then Brand Performance, then visual insights.
+      Use final_kpi_report.csv only. It contains both Current Performance and Closed Month Performance rows. Filters are connected.
     </div>
   </div>
 
@@ -1280,6 +1400,7 @@
 
     let rawData = [];
     let filteredData = [];
+    let closedMonthData = [];
     let charts = {};
     let tableSort = { key: null, direction: 1 };
 
@@ -1471,6 +1592,7 @@
       r["Brand"] = properText(pick(row, ["Brand", "Reporting Name"], ""));
       r["UOM"] = normalizeUom(pick(row, ["UOM", "Unit of Measure"], ""));
       r["Target Type"] = normalizeTargetType(pick(row, ["Target Type", "Target_Type", "Target"], ""));
+      r["Report Type"] = String(pick(row, ["Report Type", "Report_Type"], "Current Performance")).trim() || "Current Performance";
       r["Stock Level Flag"] = String(pick(row, ["Stock Level Flag", "Stock_Level_Flag", "Stock Flag"], "")).trim();
 
       r["Last_Day_Sales"] = toNum(pick(row, ["Last_Day_Sales", "Last Day Sales", "Last Day Shipment"], 0));
@@ -1603,6 +1725,142 @@
       setOptions("targetFilter", uniqueValues(rawData.filter(r => matches(r, filters, "Target Type")), "Target Type"), filters["Target Type"], true);
     }
 
+    function cleanClosedMonthRow(input) {
+      const row = {};
+      Object.keys(input || {}).forEach(k => {
+        row[normalizeHeader(k)] = input[k];
+      });
+
+      return {
+        Month: String(pick(row, ["Month"], "")).trim(),
+        "Month Number": toNum(pick(row, ["Month Number", "Month_Number"], 0)),
+        "Month Label": String(pick(row, ["Month Label", "Month_Label"], "")).trim(),
+        Division: properText(pick(row, ["Division", "DV", "Region"], "")),
+        Agent: properText(pick(row, ["Agent", "Agent Name"], "")),
+        "Target Type": normalizeTargetType(pick(row, ["Target Type", "Target_Type", "Target"], "")),
+        "Report Type": String(pick(row, ["Report Type", "Report_Type"], "Closed Month Performance")).trim() || "Closed Month Performance",
+        UOM: normalizeUom(pick(row, ["UOM", "Unit of Measure"], "")),
+        Full_Month_Target: toNum(pick(row, ["Full_Month_Target", "Full Month Target"], 0)),
+        Actual: toNum(pick(row, ["Actual", "Actual Shipment", "Full Month Actual"], 0)),
+        PY: toNum(pick(row, ["PY", "PY Shipment", "Prior Year"], 0)),
+        "Achievement %": toNum(pick(row, ["Achievement %", "Achievement", "Ach"], 0)),
+        "Actual vs PY %": toNum(pick(row, ["Actual vs PY %", "Actual vs PY", "Vs PY"], 0))
+      };
+    }
+
+    function matchesClosedMonth(row, filters, ignoreCol = null) {
+      return Object.entries(filters).every(([col, value]) => {
+        if (col === ignoreCol || value === "All") return true;
+        if (col === "Brand") return true;
+        return row[col] === value;
+      });
+    }
+
+    function closedMonthCellClass(col) {
+      if (["Full_Month_Target"].includes(col)) return "closed-section-start";
+      if (["Achievement %", "Actual vs PY %"].includes(col)) return "ach-col";
+      return "";
+    }
+
+    function aggregateClosedMonth(rows, groupCols) {
+      const map = new Map();
+
+      rows.forEach(r => {
+        const keyParts = [r["Month Number"], r["Month Label"], ...groupCols.map(c => r[c] || "Unknown")];
+        const key = keyParts.join("||");
+
+        if (!map.has(key)) {
+          const item = {
+            "Month Number": r["Month Number"],
+            "Month Label": r["Month Label"]
+          };
+          groupCols.forEach(c => item[c] = r[c] || "Unknown");
+          item.Full_Month_Target = 0;
+          item.Actual = 0;
+          item.PY = 0;
+          map.set(key, item);
+        }
+
+        const item = map.get(key);
+        item.Full_Month_Target += toNum(r.Full_Month_Target);
+        item.Actual += toNum(r.Actual);
+        item.PY += toNum(r.PY);
+      });
+
+      return [...map.values()]
+        .map(r => {
+          r["Achievement %"] = r.Full_Month_Target === 0 ? 0 : (r.Actual / r.Full_Month_Target) - 1;
+          r["Actual vs PY %"] = r.PY === 0 ? 0 : (r.Actual / r.PY) - 1;
+          return r;
+        })
+        .sort((a, b) => {
+          if (a["Month Number"] !== b["Month Number"]) return a["Month Number"] - b["Month Number"];
+          const aName = groupCols.map(c => a[c]).join(" ");
+          const bName = groupCols.map(c => b[c]).join(" ");
+          return String(aName).localeCompare(String(bName));
+        });
+    }
+
+    function renderClosedTable(tableId, rows, groupCols) {
+      const table = $(tableId);
+      if (!table) return;
+
+      const cols = [...groupCols, "Month Label", "Full_Month_Target", "Actual", "PY", "Achievement %", "Actual vs PY %"];
+      const headerNames = {
+        "Month Label": "Month",
+        "Full_Month_Target": "Full Month<br>Target",
+        "Actual": "Actual",
+        "PY": "PY",
+        "Achievement %": "Ach%",
+        "Actual vs PY %": "Vs PY%"
+      };
+
+      table.querySelector("thead").innerHTML =
+        `<tr>${cols.map(c => `<th class="${closedMonthCellClass(c)}">${headerNames[c] || escapeHtml(c)}</th>`).join("")}</tr>`;
+
+      if (!rows.length) {
+        table.querySelector("tbody").innerHTML =
+          `<tr><td colspan="${cols.length}">No closed month data found. Run Python to regenerate final_kpi_report.csv.</td></tr>`;
+        return;
+      }
+
+      table.querySelector("tbody").innerHTML = rows.map(r => {
+        return `<tr>${cols.map(c => {
+          const cls = closedMonthCellClass(c);
+          let val = r[c];
+
+          if (["Achievement %", "Actual vs PY %"].includes(c)) {
+            return `<td class="${cls} ach-cell ${achClass(val)}">${formatPct(val)}</td>`;
+          }
+
+          if (["Full_Month_Target", "Actual", "PY"].includes(c)) {
+            val = formatNumber(val);
+          } else {
+            val = escapeHtml(val);
+          }
+
+          return `<td class="${cls}">${val}</td>`;
+        }).join("")}</tr>`;
+      }).join("");
+    }
+
+    function updateClosedMonthTables() {
+      const filters = currentSelections();
+      const view = closedMonthData.filter(r => matchesClosedMonth(r, filters));
+
+      const regionRows = aggregateClosedMonth(view, ["Division"]);
+      const agentRows = aggregateClosedMonth(view, ["Division", "Agent"]);
+
+      renderClosedTable("closedRegionTable", regionRows, ["Division"]);
+      renderClosedTable("closedAgentTable", agentRows, ["Division", "Agent"]);
+    }
+
+    function loadClosedMonthCsv() {
+      // No separate CSV is needed.
+      // Closed-month rows are now read from final_kpi_report.csv where Report Type = Closed Month Performance.
+      updateClosedMonthTables();
+    }
+
     function applyFilters() {
       updateConnectedFilters();
 
@@ -1613,6 +1871,7 @@
       updatePerformanceTables(filteredData);
       updateCharts(filteredData);
       renderTable(filteredData);
+      updateClosedMonthTables();
 
       setStatus(`Loaded ${rawData.length.toLocaleString()} rows. Showing ${filteredData.length.toLocaleString()} rows.`, "success");
     }
@@ -2102,20 +2361,45 @@ function renderTable(data) {
     }
 
     function loadData(rows) {
-      const cleaned = rows.map(cleanRow).filter(r => r.Agent || r.Division || r.Brand || r.UOM || r["Target Type"]);
-      rawData = cleaned;
+      const sourceRows = rows || [];
+
+      const currentSourceRows = sourceRows.filter(r => {
+        const reportType = String(pick(r, ["Report Type", "Report_Type"], "Current Performance")).trim();
+        return reportType === "" || reportType === "Current Performance";
+      });
+
+      const closedSourceRows = sourceRows.filter(r => {
+        const reportType = String(pick(r, ["Report Type", "Report_Type"], "")).trim();
+        return reportType === "Closed Month Performance";
+      });
+
+      rawData = currentSourceRows
+        .map(cleanRow)
+        .filter(r => r.Agent || r.Division || r.Brand || r.UOM || r["Target Type"]);
+
+      closedMonthData = closedSourceRows
+        .map(cleanClosedMonthRow)
+        .filter(r => r.Division || r.Agent || r["Month Label"]);
 
       if (!rawData.length) {
-        setStatus("CSV loaded but no usable rows were found. Please upload the V4 final_kpi_report.csv extract.", "error");
+        setStatus("CSV loaded but no current performance rows were found. Confirm Report Type = Current Performance exists.", "error");
+        updateClosedMonthTables();
         return;
       }
 
       const warning = validateData(rawData);
       updateConnectedFilters();
       applyFilters();
+      updateClosedMonthTables();
 
-      if (warning) setStatus(`${warning} Rows loaded: ${rawData.length.toLocaleString()}`, "error");
-      else setStatus(`final_kpi_report.csv loaded successfully: ${rawData.length.toLocaleString()} rows.`, "success");
+      const totalRows = sourceRows.length;
+      const closedRows = closedMonthData.length;
+
+      if (warning) {
+        setStatus(`${warning} Rows loaded: ${totalRows.toLocaleString()} | Closed-month rows: ${closedRows.toLocaleString()}`, "error");
+      } else {
+        setStatus(`final_kpi_report.csv loaded successfully: ${totalRows.toLocaleString()} rows | Current rows: ${rawData.length.toLocaleString()} | Closed-month rows: ${closedRows.toLocaleString()}`, "success");
+      }
     }
 
     function loadDefaultCsv() {

@@ -4139,14 +4139,322 @@ print("FINAL STOCK CHECK BY UOM AND TARGET TYPE")
 print("=" * 120)
 display(final_stock_check)
 
+# ==================================================================================================
+# CLOSED MONTH PERFORMANCE TABLE
+# ==================================================================================================
+# Purpose:
+#   Adds a closed-month table for the HTML dashboard.
+#   Months included: January up to the month before the current open month.
+#
+# Grain:
+#   Month + Division + Agent + Target Type + UOM
+#
+# Metrics:
+#   Full Month Target
+#   Actual Shipment
+#   PY Shipment
+#   Achievement %
+#   Actual vs PY %
+# ==================================================================================================
+
+closed_month_start = pd.Timestamp(LAST_SHIPMENT_DATE.year, 1, 1)
+closed_month_end = CURRENT_MONTH_START - pd.offsets.MonthBegin(1)
+
+closed_months = pd.date_range(
+    start=closed_month_start,
+    end=closed_month_end,
+    freq="MS"
+)
+
+if len(closed_months) == 0:
+    closed_month_performance = pd.DataFrame(columns=[
+        "Month",
+        "Month Number",
+        "Month Label",
+        "Division",
+        "Agent",
+        "Target Type",
+        "UOM",
+        "Full_Month_Target",
+        "Actual",
+        "PY",
+        "Achievement %",
+        "Actual vs PY %"
+    ])
+else:
+    closed_month_set = set(closed_months)
+
+    # ----------------------------------------------------------------------------------------------
+    # Full month target by month + agent + target type.
+    # Use Target Crates, not Target Crates To Date, because closed months should show full month target.
+    # ----------------------------------------------------------------------------------------------
+    closed_target = target_ab[
+        target_ab["Month Start"].isin(closed_month_set)
+    ].copy()
+
+    closed_target_monthly = (
+        closed_target
+        .groupby(
+            ["Month Start", "Division", "Agent Key", "Agent", "Target Type"],
+            dropna=False
+        )
+        .agg(Full_Month_Target=("Target Crates", "sum"))
+        .reset_index()
+    )
+
+    # ----------------------------------------------------------------------------------------------
+    # Actual shipment by closed month + agent.
+    # ----------------------------------------------------------------------------------------------
+    closed_actual = actual_ab.copy()
+    closed_actual["Month Start"] = closed_actual["Shipment Date"].apply(
+        lambda x: pd.Timestamp(x.year, x.month, 1) if pd.notna(x) else pd.NaT
+    )
+
+    closed_actual = closed_actual[
+        closed_actual["Month Start"].isin(closed_month_set)
+    ].copy()
+
+    closed_actual_monthly = (
+        closed_actual
+        .groupby(
+            ["Month Start", "DV", "Agent Key", "Agent"],
+            dropna=False
+        )
+        .agg(Actual=("Actual Shipment Crates", "sum"))
+        .reset_index()
+        .rename(columns={"DV": "Division"})
+    )
+
+    # ----------------------------------------------------------------------------------------------
+    # PY shipment by equivalent month last year + agent.
+    # Example: Jan 2026 compares with Jan 2025.
+    # ----------------------------------------------------------------------------------------------
+    closed_py = py_ab.copy()
+    closed_py["Month Start"] = closed_py["PY Shipment Date"].apply(
+        lambda x: pd.Timestamp(LAST_SHIPMENT_DATE.year, x.month, 1) if pd.notna(x) else pd.NaT
+    )
+
+    closed_py = closed_py[
+        closed_py["Month Start"].isin(closed_month_set)
+    ].copy()
+
+    closed_py_monthly = (
+        closed_py
+        .groupby(
+            ["Month Start", "DV", "Agent Key", "Agent"],
+            dropna=False
+        )
+        .agg(PY=("PY Shipment Crates", "sum"))
+        .reset_index()
+        .rename(columns={"DV": "Division"})
+    )
+
+    # ----------------------------------------------------------------------------------------------
+    # Build base from target, actual, and PY to avoid losing agents with only one source.
+    # ----------------------------------------------------------------------------------------------
+    closed_identity_sources = []
+    for df in [closed_target_monthly, closed_actual_monthly, closed_py_monthly]:
+        keep_cols = ["Month Start", "Division", "Agent Key", "Agent"]
+        closed_identity_sources.append(df[[c for c in keep_cols if c in df.columns]].copy())
+
+    closed_base_raw = pd.concat(closed_identity_sources, ignore_index=True).drop_duplicates()
+
+    closed_base = (
+        closed_base_raw
+        .groupby(["Month Start", "Agent Key"], dropna=False)
+        .agg(
+            Division=("Division", lambda x: x.dropna().iloc[0] if len(x.dropna()) else np.nan),
+            Agent=("Agent", lambda x: x.dropna().iloc[0] if len(x.dropna()) else np.nan)
+        )
+        .reset_index()
+    )
+
+    # Create target-type rows so users can use the same Target Type filter in the dashboard.
+    closed_target_types = (
+        fact_target["Target Type"]
+        .dropna()
+        .drop_duplicates()
+        .sort_values()
+        .tolist()
+    )
+
+    if not closed_target_types:
+        closed_target_types = ["Sales Target"]
+
+    closed_base = closed_base.assign(_key=1).merge(
+        pd.DataFrame({"Target Type": closed_target_types, "_key": 1}),
+        how="left",
+        on="_key"
+    ).drop(columns="_key")
+
+    closed_month_performance_crates = (
+        closed_base
+        .merge(
+            metric_only(
+                closed_target_monthly.rename(columns={"Full_Month_Target": "Full_Month_Target"}),
+                ["Full_Month_Target"]
+            ),
+            how="left",
+            on=["Agent Key"]
+        )
+    )
+
+    # The metric_only helper aggregates without Month/Target Type, so do the monthly merges explicitly.
+    closed_month_performance_crates = (
+        closed_base
+        .merge(
+            closed_target_monthly[
+                ["Month Start", "Agent Key", "Target Type", "Full_Month_Target"]
+            ],
+            how="left",
+            on=["Month Start", "Agent Key", "Target Type"]
+        )
+        .merge(
+            closed_actual_monthly[
+                ["Month Start", "Agent Key", "Actual"]
+            ],
+            how="left",
+            on=["Month Start", "Agent Key"]
+        )
+        .merge(
+            closed_py_monthly[
+                ["Month Start", "Agent Key", "PY"]
+            ],
+            how="left",
+            on=["Month Start", "Agent Key"]
+        )
+    )
+
+    for col in ["Full_Month_Target", "Actual", "PY"]:
+        closed_month_performance_crates[col] = pd.to_numeric(
+            closed_month_performance_crates[col],
+            errors="coerce"
+        ).fillna(0)
+
+    closed_month_performance_crates["UOM"] = "Crates"
+
+    closed_month_performance_hl = closed_month_performance_crates.copy()
+    closed_month_performance_hl["UOM"] = "HL"
+
+    for col in ["Full_Month_Target", "Actual", "PY"]:
+        closed_month_performance_hl[col] = closed_month_performance_hl[col] * HL_PER_CRATE
+
+    closed_month_performance = pd.concat(
+        [closed_month_performance_crates, closed_month_performance_hl],
+        ignore_index=True
+    )
+
+    closed_month_performance["Achievement %"] = safe_divide(
+        closed_month_performance["Actual"],
+        closed_month_performance["Full_Month_Target"]
+    ) - 1
+
+    closed_month_performance["Actual vs PY %"] = safe_divide(
+        closed_month_performance["Actual"],
+        closed_month_performance["PY"]
+    ) - 1
+
+    closed_month_performance["Month"] = closed_month_performance["Month Start"].dt.strftime("%b")
+    closed_month_performance["Month Number"] = closed_month_performance["Month Start"].dt.month
+    closed_month_performance["Month Label"] = closed_month_performance["Month Start"].dt.strftime("%b %Y")
+
+    closed_month_performance = closed_month_performance[
+        [
+            "Month",
+            "Month Number",
+            "Month Label",
+            "Division",
+            "Agent",
+            "Target Type",
+            "UOM",
+            "Full_Month_Target",
+            "Actual",
+            "PY",
+            "Achievement %",
+            "Actual vs PY %"
+        ]
+    ].copy()
+
+closed_month_check = (
+    closed_month_performance[
+        (closed_month_performance["UOM"] == "Crates")
+    ]
+    .groupby(["Month Label", "Target Type", "UOM"], dropna=False)
+    .agg(
+        Full_Month_Target=("Full_Month_Target", "sum"),
+        Actual=("Actual", "sum"),
+        PY=("PY", "sum")
+    )
+    .reset_index()
+)
+
+print("=" * 120)
+print("CLOSED MONTH PERFORMANCE CHECK")
+print("=" * 120)
+print("Closed months included:", ", ".join(closed_month_performance["Month Label"].drop_duplicates().tolist()))
+display(closed_month_check)
+
+
 # --------------------------------------------------------------------------------------------------
-# Export only the final extract.
+# Export one combined extract only.
+# --------------------------------------------------------------------------------------------------
+# One file will populate the full dashboard:
+#   final_kpi_report.csv
+#
+# Report Type:
+#   Current Performance       = current dashboard, cards, charts, regional/brand, detailed table
+#   Closed Month Performance  = closed-month region/agent tables
 # --------------------------------------------------------------------------------------------------
 
 EXTRACTION_FOLDER.mkdir(parents=True, exist_ok=True)
 final_output_file = EXTRACTION_FOLDER / "final_kpi_report.csv"
+
 final_kpi_report = final_kpi_report.loc[:, ~final_kpi_report.columns.duplicated()].copy()
-final_kpi_report.to_csv(final_output_file, index=False, encoding="utf-8-sig")
+final_kpi_report["Report Type"] = "Current Performance"
+
+closed_month_performance = closed_month_performance.loc[
+    :,
+    ~closed_month_performance.columns.duplicated()
+].copy()
+closed_month_performance["Report Type"] = "Closed Month Performance"
+
+# Add missing columns on both sides before concatenating.
+all_output_columns = list(final_kpi_report.columns)
+for col in closed_month_performance.columns:
+    if col not in all_output_columns:
+        all_output_columns.append(col)
+
+for col in all_output_columns:
+    if col not in final_kpi_report.columns:
+        final_kpi_report[col] = np.nan
+    if col not in closed_month_performance.columns:
+        closed_month_performance[col] = np.nan
+
+combined_final_extract = pd.concat(
+    [
+        final_kpi_report[all_output_columns],
+        closed_month_performance[all_output_columns]
+    ],
+    ignore_index=True
+)
+
+combined_final_extract.to_csv(final_output_file, index=False, encoding="utf-8-sig")
+
+print("=" * 120)
+print("COMBINED FINAL EXTRACT CHECK")
+print("=" * 120)
+print("Exported file:")
+print(final_output_file)
+print("Rows by Report Type:")
+display(
+    combined_final_extract
+    .groupby("Report Type", dropna=False)
+    .size()
+    .reset_index(name="Rows")
+)
+print("Use only final_kpi_report.csv as the data source for the HTML dashboard.")
+
+
 
 final_period_check = (
     final_kpi_report
@@ -4183,9 +4491,10 @@ print("FINAL EXTRACT EXPORTED")
 print("=" * 120)
 print("Exported file:")
 print(final_output_file)
-print("Use final_kpi_report.csv as the data source for the HTML dashboard.")
+print("Use final_kpi_report.csv as the only data source for the HTML dashboard.")
 print("Reminder: Filter UOM and Target Type before checking totals.")
 print("Reminder: Days of Stock = Stock_per_Agent / Avg_Daily_Depletion.")
 
 # %%
+
 
