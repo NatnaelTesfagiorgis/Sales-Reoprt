@@ -1379,6 +1379,298 @@
       width: 100%;
     }
 
+  
+    /* =========================================================
+       MOBILE VERSION
+       Same HTML becomes mobile-friendly when opened on phone.
+       ========================================================= */
+    @media (max-width: 768px) {
+      body {
+        padding: 8px !important;
+        overflow-x: hidden;
+      }
+
+      .page {
+        padding: 10px !important;
+        border-radius: 18px !important;
+        max-width: 100% !important;
+      }
+
+      .topbar {
+        padding: 12px !important;
+        border-radius: 18px !important;
+      }
+
+      .brand-block {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+      }
+
+      .logo-img {
+        width: 76px !important;
+        height: auto !important;
+      }
+
+      .title h1 {
+        font-size: 20px !important;
+        line-height: 1.05 !important;
+      }
+
+      .pattern-strip {
+        height: 26px !important;
+        border-radius: 12px !important;
+      }
+
+      .filters {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+        padding: 10px !important;
+        border-radius: 16px !important;
+      }
+
+      .filter-group label {
+        font-size: 11px !important;
+      }
+
+      select,
+      input,
+      .search {
+        font-size: 12px !important;
+        padding: 8px 9px !important;
+        border-radius: 10px !important;
+        width: 100% !important;
+      }
+
+      .section-title {
+        font-size: 15px !important;
+        margin: 14px 0 8px !important;
+      }
+
+      .cards,
+      .combined-cards,
+      .stock-cards {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+      }
+
+      .card,
+      .combo-card,
+      .stock-card {
+        padding: 10px !important;
+        border-radius: 16px !important;
+        min-height: auto !important;
+      }
+
+      .label,
+      .combo-line,
+      .stock-input {
+        font-size: 11px !important;
+      }
+
+      .value,
+      .combo-card .value {
+        font-size: 21px !important;
+        line-height: 1.05 !important;
+      }
+
+      .combo-line strong {
+        font-size: 14px !important;
+      }
+
+      .stock-breakdown {
+        grid-template-columns: 1fr !important;
+        gap: 6px !important;
+      }
+
+      .performance-grid,
+      .grid,
+      .closed-month-grid {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+      }
+
+      .panel,
+      .mini-table-panel,
+      .closed-month-panel,
+      .table-panel,
+      .bottom-upload-panel {
+        padding: 10px !important;
+        border-radius: 16px !important;
+        min-height: auto !important;
+      }
+
+      .panel-header,
+      .table-top {
+        align-items: flex-start !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+        margin-bottom: 8px !important;
+        padding: 10px !important;
+      }
+
+      .panel-header h2,
+      .table-top h2,
+      .bottom-upload-panel h2 {
+        font-size: 15px !important;
+      }
+
+      .panel-header-actions {
+        width: 100% !important;
+        justify-content: flex-start !important;
+      }
+
+      .export-btn {
+        font-size: 11px !important;
+        padding: 7px 9px !important;
+        border-radius: 9px !important;
+      }
+
+      canvas {
+        max-height: 260px !important;
+      }
+
+      .mini-table-wrap,
+      .closed-month-wrap,
+      .table-wrap {
+        overflow-x: auto !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        border-radius: 12px !important;
+      }
+
+      .mini-table-wrap {
+        max-height: none !important;
+      }
+
+      .closed-month-wrap {
+        max-height: 360px !important;
+      }
+
+      .table-wrap {
+        max-height: 430px !important;
+      }
+
+      table {
+        font-size: 11px !important;
+        min-width: 850px !important;
+      }
+
+      th,
+      td {
+        padding: 6px 6px !important;
+        font-size: 11px !important;
+      }
+
+      #regionalTable,
+      #brandRegionPerformanceTable {
+        min-width: 980px !important;
+      }
+
+      #closedRegionTable,
+      #closedBrandTable {
+        min-width: 1050px !important;
+      }
+
+      #dataTable {
+        min-width: 1250px !important;
+      }
+
+      /* Keep key first columns fixed on mobile */
+      #regionalTable th:first-child,
+      #regionalTable td:first-child,
+      #brandRegionPerformanceTable th:first-child,
+      #brandRegionPerformanceTable td:first-child,
+      #closedRegionTable .closed-sticky-main,
+      #closedBrandTable .closed-sticky-main {
+        position: sticky !important;
+        left: 0 !important;
+        z-index: 10 !important;
+        background: #fffdf7 !important;
+        box-shadow: 7px 0 9px rgba(80, 55, 5, 0.10) !important;
+        min-width: 96px !important;
+        max-width: 118px !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+      }
+
+      #regionalTable th:first-child,
+      #brandRegionPerformanceTable th:first-child,
+      #closedRegionTable thead .closed-sticky-main,
+      #closedBrandTable thead .closed-sticky-main {
+        background: #fff4cf !important;
+        z-index: 14 !important;
+      }
+
+      /* Detailed report fixed columns stay usable on mobile */
+      #dataTable th[data-col="Division"],
+      #dataTable td[data-col="Division"] {
+        min-width: 62px !important;
+        max-width: 62px !important;
+        width: 62px !important;
+        left: 0 !important;
+        position: sticky !important;
+        z-index: 9 !important;
+        background: #fffdf7 !important;
+      }
+
+      #dataTable th[data-col="Agent"],
+      #dataTable td[data-col="Agent"] {
+        min-width: 112px !important;
+        max-width: 112px !important;
+        width: 112px !important;
+        left: 62px !important;
+        position: sticky !important;
+        z-index: 9 !important;
+        background: #fffdf7 !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+      }
+
+      #dataTable th[data-col="Division"],
+      #dataTable th[data-col="Agent"] {
+        background: #fff4cf !important;
+        z-index: 15 !important;
+      }
+
+      .footer {
+        font-size: 10px !important;
+        line-height: 1.35 !important;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .filters {
+        grid-template-columns: 1fr !important;
+      }
+
+      .cards,
+      .combined-cards,
+      .stock-cards {
+        grid-template-columns: 1fr !important;
+      }
+
+      .title h1 {
+        font-size: 18px !important;
+      }
+
+      .value,
+      .combo-card .value {
+        font-size: 20px !important;
+      }
+
+      #regionalTable,
+      #brandRegionPerformanceTable,
+      #closedRegionTable,
+      #closedBrandTable {
+        min-width: 920px !important;
+      }
+
+      #dataTable {
+        min-width: 1180px !important;
+      }
+    }
+
   </style>
 </head>
 
