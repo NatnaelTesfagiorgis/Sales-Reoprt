@@ -1114,15 +1114,15 @@
 
     #closedRegionTable th,
     #closedRegionTable td,
-    #closedAgentTable th,
-    #closedAgentTable td {
+    #closedBrandTable th,
+    #closedBrandTable td {
       font-size: 12px;
       padding: 8px 8px;
       white-space: nowrap;
     }
 
     #closedRegionTable th,
-    #closedAgentTable th {
+    #closedBrandTable th {
       background: #fff4cf;
       white-space: normal !important;
       line-height: 1.12;
@@ -1130,8 +1130,8 @@
 
     #closedRegionTable th:first-child,
     #closedRegionTable td:first-child,
-    #closedAgentTable th:first-child,
-    #closedAgentTable td:first-child {
+    #closedBrandTable th:first-child,
+    #closedBrandTable td:first-child {
       position: sticky;
       left: 0;
       z-index: 4;
@@ -1141,13 +1141,13 @@
     }
 
     #closedRegionTable th:first-child,
-    #closedAgentTable th:first-child {
+    #closedBrandTable th:first-child {
       z-index: 7;
       background: #fff4cf;
     }
 
-    #closedAgentTable th:nth-child(2),
-    #closedAgentTable td:nth-child(2) {
+    #closedBrandTable th:nth-child(2),
+    #closedBrandTable td:nth-child(2) {
       position: sticky;
       left: 70px;
       z-index: 4;
@@ -1160,15 +1160,15 @@
       text-overflow: ellipsis;
     }
 
-    #closedAgentTable th:nth-child(2) {
+    #closedBrandTable th:nth-child(2) {
       z-index: 7;
       background: #fff4cf;
     }
 
     #closedRegionTable th.closed-section-start,
     #closedRegionTable td.closed-section-start,
-    #closedAgentTable th.closed-section-start,
-    #closedAgentTable td.closed-section-start {
+    #closedBrandTable th.closed-section-start,
+    #closedBrandTable td.closed-section-start {
       border-left: 10px solid #d6b24a;
     }
 
@@ -1176,6 +1176,86 @@
       .closed-month-grid {
         grid-template-columns: 1fr;
       }
+    }
+
+  
+    /* CSV export buttons for visuals */
+    .export-btn {
+      border: 1px solid #b88a20;
+      background: #fff4cf;
+      color: #5b3b00;
+      border-radius: 10px;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .export-btn:hover {
+      background: #ead08b;
+    }
+
+    .panel-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+  
+    /* Last Day and WTD cards: PY comparison removed */
+    #lastDaySalesCard,
+    #wtdSalesCard,
+    #lastDayDepletionCard,
+    #wtdDepletionCard {
+      margin-bottom: 12px;
+    }
+
+  
+    /* Move data loaded confirmation to the bottom */
+    .load-status-bottom {
+      margin-top: 14px;
+      margin-bottom: 8px;
+    }
+
+    /* Closed month brand table replaces closed month agent table */
+    #closedBrandTable th,
+    #closedBrandTable td {
+      font-size: 12px;
+      padding: 8px 8px;
+      white-space: nowrap;
+    }
+
+    #closedBrandTable th {
+      background: #fff4cf;
+      white-space: normal !important;
+      line-height: 1.12;
+    }
+
+    #closedBrandTable th:first-child,
+    #closedBrandTable td:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 4;
+      background: #fffdf7;
+      box-shadow: 8px 0 10px rgba(80, 55, 5, 0.10);
+      font-weight: 800;
+      min-width: 110px;
+      max-width: 150px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #closedBrandTable th:first-child {
+      z-index: 7;
+      background: #fff4cf;
+    }
+
+    #closedBrandTable th.closed-section-start,
+    #closedBrandTable td.closed-section-start {
+      border-left: 10px solid #d6b24a;
     }
 
   </style>
@@ -1192,8 +1272,6 @@
         </div>
       </div>
     </header>
-
-    <div id="loadStatus" class="load-status" style="display:none;"></div>
 
     <div class="pattern-strip"></div>
 
@@ -1226,14 +1304,12 @@
         <div class="label">Last Day Shipment</div>
         <div id="lastDaySalesCard" class="value">0</div>
         <div class="combo-line"><span>Vs Target</span><strong id="lastDaySalesAchCard">0%</strong></div>
-        <div class="combo-line"><span>Growth vs PY</span><strong id="lastDaySalesPyCard">0%</strong></div>
       </div>
 
       <div class="card combo-card">
         <div class="label">WTD Shipment</div>
         <div id="wtdSalesCard" class="value">0</div>
         <div class="combo-line"><span>Vs Target</span><strong id="wtdSalesAchCard">0%</strong></div>
-        <div class="combo-line"><span>Growth vs PY</span><strong id="wtdSalesPyCard">0%</strong></div>
       </div>
 
       <div class="card combo-card">
@@ -1257,14 +1333,12 @@
         <div class="label">Last Day Depletion</div>
         <div id="lastDayDepletionCard" class="value">0</div>
         <div class="combo-line"><span>Vs Target</span><strong id="lastDayDepletionAchCard">0%</strong></div>
-        <div class="combo-line"><span>Growth vs PY</span><strong id="lastDayDepletionPyCard">0%</strong></div>
       </div>
 
       <div class="card combo-card">
         <div class="label">WTD Depletion</div>
         <div id="wtdDepletionCard" class="value">0</div>
         <div class="combo-line"><span>Vs Target</span><strong id="wtdDepletionAchCard">0%</strong></div>
-        <div class="combo-line"><span>Growth vs PY</span><strong id="wtdDepletionPyCard">0%</strong></div>
       </div>
 
       <div class="card combo-card">
@@ -1301,6 +1375,9 @@
       <div class="mini-table-panel">
         <div class="panel-header">
           <h2>Regional Performance</h2>
+          <div class="panel-header-actions">
+            <button class="export-btn" onclick="exportRegionalPerformanceCsv()">Export CSV</button>
+          </div>
         </div>
         <div class="mini-table-wrap">
           <table id="regionalTable">
@@ -1313,37 +1390,12 @@
       <div class="mini-table-panel">
         <div class="panel-header">
           <h2>Brand Performance</h2>
+          <div class="panel-header-actions">
+            <button class="export-btn" onclick="exportBrandPerformanceCsv()">Export CSV</button>
+          </div>
         </div>
         <div class="mini-table-wrap">
           <table id="brandRegionPerformanceTable">
-            <thead></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <section class="closed-month-grid">
-      <div class="closed-month-panel">
-        <div class="panel-header">
-          <h2>Closed Months by Region</h2>
-          <span class="hint">From final_kpi_report.csv | Target, actual, PY</span>
-        </div>
-        <div class="closed-month-wrap">
-          <table id="closedRegionTable">
-            <thead></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="closed-month-panel">
-        <div class="panel-header">
-          <h2>Closed Months by Agent</h2>
-          <span class="hint">From final_kpi_report.csv | Target, actual, PY</span>
-        </div>
-        <div class="closed-month-wrap">
-          <table id="closedAgentTable">
             <thead></thead>
             <tbody></tbody>
           </table>
@@ -1370,7 +1422,10 @@
     <section class="table-panel">
       <div class="table-top">
         <h2>Detailed Report</h2>
-        <input id="tableSearch" class="search" type="text" placeholder="Search agent / division..." />
+        <div class="panel-header-actions">
+          <button class="export-btn" onclick="exportDetailedReportCsv()">Export CSV</button>
+          <input id="tableSearch" class="search" type="text" placeholder="Search agent / division..." />
+        </div>
       </div>
       <div class="table-wrap">
         <table id="dataTable">
@@ -1380,12 +1435,46 @@
       </div>
     </section>
 
+    <section class="closed-month-grid">
+      <div class="closed-month-panel">
+        <div class="panel-header">
+          <h2>Closed Months by Region</h2>
+          <div class="panel-header-actions">
+            <button class="export-btn" onclick="exportClosedRegionCsv()">Export CSV</button>
+          </div>
+        </div>
+        <div class="closed-month-wrap">
+          <table id="closedRegionTable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="closed-month-panel">
+        <div class="panel-header">
+          <h2>Closed Months by Brand</h2>
+          <div class="panel-header-actions">
+            <button class="export-btn" onclick="exportClosedBrandCsv()">Export CSV</button>
+          </div>
+        </div>
+        <div class="closed-month-wrap">
+          <table id="closedBrandTable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
     <section class="bottom-upload-panel">
       <div>
         <h2>Data Upload</h2>
       </div>
       <input id="csvFile" type="file" accept=".csv" />
     </section>
+
+    <div id="loadStatus" class="load-status load-status-bottom" style="display:none;"></div>
 
     <div class="footer">
       Use final_kpi_report.csv only. It contains both Current Performance and Closed Month Performance rows. Filters are connected.
@@ -1737,6 +1826,7 @@
         "Month Label": String(pick(row, ["Month Label", "Month_Label"], "")).trim(),
         Division: properText(pick(row, ["Division", "DV", "Region"], "")),
         Agent: properText(pick(row, ["Agent", "Agent Name"], "")),
+        Brand: properText(pick(row, ["Brand", "Reporting Name"], "")),
         "Target Type": normalizeTargetType(pick(row, ["Target Type", "Target_Type", "Target"], "")),
         "Report Type": String(pick(row, ["Report Type", "Report_Type"], "Closed Month Performance")).trim() || "Closed Month Performance",
         UOM: normalizeUom(pick(row, ["UOM", "Unit of Measure"], "")),
@@ -1751,7 +1841,11 @@
     function matchesClosedMonth(row, filters, ignoreCol = null) {
       return Object.entries(filters).every(([col, value]) => {
         if (col === ignoreCol || value === "All") return true;
-        if (col === "Brand") return true;
+
+        // Closed month brand analysis is at month + region + brand level.
+        // Agent slicer should not remove brand rows when the closed data has no agent detail.
+        if (col === "Agent" && !row.Agent) return true;
+
         return row[col] === value;
       });
     }
@@ -1849,16 +1943,147 @@
       const view = closedMonthData.filter(r => matchesClosedMonth(r, filters));
 
       const regionRows = aggregateClosedMonth(view, ["Division"]);
-      const agentRows = aggregateClosedMonth(view, ["Division", "Agent"]);
+      const brandRows = aggregateClosedMonth(view, ["Brand"]);
 
       renderClosedTable("closedRegionTable", regionRows, ["Division"]);
-      renderClosedTable("closedAgentTable", agentRows, ["Division", "Agent"]);
+      renderClosedTable("closedBrandTable", brandRows, ["Brand"]);
     }
 
     function loadClosedMonthCsv() {
       // No separate CSV is needed.
       // Closed-month rows are now read from final_kpi_report.csv where Report Type = Closed Month Performance.
       updateClosedMonthTables();
+    }
+
+    function csvEscape(value) {
+      if (value === null || value === undefined) return "";
+      const text = String(value);
+      if (/[",\n\r]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
+      return text;
+    }
+
+    function downloadCsv(filename, rows, columns) {
+      if (!rows || !rows.length) {
+        alert("No data available to export.");
+        return;
+      }
+
+      const header = columns.map(csvEscape).join(",");
+      const body = rows.map(row => columns.map(col => csvEscape(row[col])).join(",")).join("\n");
+      const csv = "\uFEFF" + header + "\n" + body;
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    function exportRegionalPerformanceCsv() {
+      const rows = calcPerformanceRows(filteredData, "Division").map(r => ({
+        Division: r.name,
+        MTD_Target: r.MTD_Target,
+        MTD_Shipment: r.MTD_Sales,
+        MTD_Achievement: r["MTD Ach"],
+        YTD_Target: r.YTD_Target,
+        YTD_Shipment: r.YTD_Sales,
+        YTD_Achievement: r["YTD Ach"],
+        MTD_Depletion_Target: r.MTD_Target,
+        MTD_Depletion: r.MTD_Depletion,
+        MTD_Depletion_Achievement: r["MTD Depletion Ach"],
+        YTD_Depletion_Target: r.YTD_Target,
+        YTD_Depletion: r.YTD_Depletion,
+        YTD_Depletion_Achievement: r["YTD Depletion Ach"],
+        Days_of_Stock: r["Days of Stock"]
+      }));
+
+      downloadCsv(
+        "regional_performance.csv",
+        rows,
+        ["Division", "MTD_Target", "MTD_Shipment", "MTD_Achievement", "YTD_Target", "YTD_Shipment", "YTD_Achievement", "MTD_Depletion_Target", "MTD_Depletion", "MTD_Depletion_Achievement", "YTD_Depletion_Target", "YTD_Depletion", "YTD_Depletion_Achievement", "Days_of_Stock"]
+      );
+    }
+
+    function exportBrandPerformanceCsv() {
+      const rows = calcBrandRows(filteredData, 9999).map(r => ({
+        Brand: r.Brand,
+        MTD_Target: r.MTD_Target,
+        MTD_Shipment: r.MTD_Sales,
+        MTD_Achievement: r["MTD Ach"],
+        YTD_Target: r.YTD_Target,
+        YTD_Shipment: r.YTD_Sales,
+        YTD_Achievement: r["YTD Ach"],
+        MTD_Depletion_Target: r.MTD_Target,
+        MTD_Depletion: r.MTD_Depletion,
+        MTD_Depletion_Achievement: r["MTD Depletion Ach"],
+        YTD_Depletion_Target: r.YTD_Target,
+        YTD_Depletion: r.YTD_Depletion,
+        YTD_Depletion_Achievement: r["YTD Depletion Ach"]
+      }));
+
+      downloadCsv(
+        "brand_performance.csv",
+        rows,
+        ["Brand", "MTD_Target", "MTD_Shipment", "MTD_Achievement", "YTD_Target", "YTD_Shipment", "YTD_Achievement", "MTD_Depletion_Target", "MTD_Depletion", "MTD_Depletion_Achievement", "YTD_Depletion_Target", "YTD_Depletion", "YTD_Depletion_Achievement"]
+      );
+    }
+
+    function exportDetailedReportCsv() {
+      const search = $("tableSearch") ? $("tableSearch").value.trim().toLowerCase() : "";
+      let view = aggregateForAgentTable(filteredData);
+
+      view = view.filter(r => {
+        if (!search) return true;
+        return ["Division", "Agent", "Target Type", "Stock Level Flag"]
+          .some(col => String(r[col] || "").toLowerCase().includes(search));
+      });
+
+      const detailedExcludedCols = new Set([
+        "Last_Day_PY",
+        "Last Day Sales vs PY",
+        "Last_Day_Depletion_PY",
+        "Last Day Depletion vs PY",
+        "WTD_PY",
+        "WTD Sales vs PY",
+        "WTD_Depletion_PY",
+        "WTD Depletion vs PY",
+        "Brand",
+        "UOM"
+      ]);
+
+      const cols = preferredCols.filter(c =>
+        rawData.length &&
+        c in rawData[0] &&
+        !detailedExcludedCols.has(c)
+      );
+
+      downloadCsv("detailed_report.csv", view, cols);
+    }
+
+    function exportClosedRegionCsv() {
+      const filters = currentSelections();
+      const view = closedMonthData.filter(r => matchesClosedMonth(r, filters));
+      const rows = aggregateClosedMonth(view, ["Division"]);
+      downloadCsv(
+        "closed_month_by_region.csv",
+        rows,
+        ["Division", "Month Label", "Full_Month_Target", "Actual", "PY", "Achievement %", "Actual vs PY %"]
+      );
+    }
+
+    function exportClosedBrandCsv() {
+      const filters = currentSelections();
+      const view = closedMonthData.filter(r => matchesClosedMonth(r, filters));
+      const rows = aggregateClosedMonth(view, ["Brand"]);
+      downloadCsv(
+        "closed_month_by_brand.csv",
+        rows,
+        ["Brand", "Month Label", "Full_Month_Target", "Actual", "PY", "Achievement %", "Actual vs PY %"]
+      );
     }
 
     function applyFilters() {

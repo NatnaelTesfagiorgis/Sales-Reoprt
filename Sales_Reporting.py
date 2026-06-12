@@ -4192,6 +4192,7 @@ if len(closed_months) == 0:
         "Month Label",
         "Division",
         "Agent",
+        "Brand",
         "Target Type",
         "UOM",
         "Full_Month_Target",
@@ -4204,8 +4205,9 @@ else:
     closed_month_set = set(closed_months)
 
     # ----------------------------------------------------------------------------------------------
-    # Full month target by month + agent + target type.
+    # Full month target by month + agent + brand + target type.
     # Use Target Crates, not Target Crates To Date, because closed months should show full month target.
+    # Brand is included so the dashboard can populate Closed Months by Brand.
     # ----------------------------------------------------------------------------------------------
     closed_target = target_ab[
         target_ab["Month Start"].isin(closed_month_set)
@@ -4214,7 +4216,7 @@ else:
     closed_target_monthly = (
         closed_target
         .groupby(
-            ["Month Start", "Division", "Agent Key", "Agent", "Target Type"],
+            ["Month Start", "Division", "Agent Key", "Agent", "Brand KPI Key", "Target Type"],
             dropna=False
         )
         .agg(Full_Month_Target=("Target Crates", "sum"))
@@ -4222,7 +4224,7 @@ else:
     )
 
     # ----------------------------------------------------------------------------------------------
-    # Actual shipment by closed month + agent.
+    # Actual shipment by closed month + agent + brand.
     # ----------------------------------------------------------------------------------------------
     closed_actual = actual_ab.copy()
     closed_actual["Month Start"] = closed_actual["Shipment Date"].apply(
@@ -4236,7 +4238,7 @@ else:
     closed_actual_monthly = (
         closed_actual
         .groupby(
-            ["Month Start", "DV", "Agent Key", "Agent"],
+            ["Month Start", "DV", "Agent Key", "Agent", "Brand KPI Key"],
             dropna=False
         )
         .agg(Actual=("Actual Shipment Crates", "sum"))
@@ -4245,7 +4247,7 @@ else:
     )
 
     # ----------------------------------------------------------------------------------------------
-    # PY shipment by equivalent month last year + agent.
+    # PY shipment by equivalent month last year + agent + brand.
     # Example: Jan 2026 compares with Jan 2025.
     # ----------------------------------------------------------------------------------------------
     closed_py = py_ab.copy()
@@ -4260,7 +4262,7 @@ else:
     closed_py_monthly = (
         closed_py
         .groupby(
-            ["Month Start", "DV", "Agent Key", "Agent"],
+            ["Month Start", "DV", "Agent Key", "Agent", "Brand KPI Key"],
             dropna=False
         )
         .agg(PY=("PY Shipment Crates", "sum"))
@@ -4269,24 +4271,26 @@ else:
     )
 
     # ----------------------------------------------------------------------------------------------
-    # Build base from target, actual, and PY to avoid losing agents with only one source.
+    # Build base from target, actual, and PY to avoid losing agents/brands with only one source.
     # ----------------------------------------------------------------------------------------------
     closed_identity_sources = []
     for df in [closed_target_monthly, closed_actual_monthly, closed_py_monthly]:
-        keep_cols = ["Month Start", "Division", "Agent Key", "Agent"]
+        keep_cols = ["Month Start", "Division", "Agent Key", "Agent", "Brand KPI Key"]
         closed_identity_sources.append(df[[c for c in keep_cols if c in df.columns]].copy())
 
     closed_base_raw = pd.concat(closed_identity_sources, ignore_index=True).drop_duplicates()
 
     closed_base = (
         closed_base_raw
-        .groupby(["Month Start", "Agent Key"], dropna=False)
+        .groupby(["Month Start", "Agent Key", "Brand KPI Key"], dropna=False)
         .agg(
             Division=("Division", lambda x: x.dropna().iloc[0] if len(x.dropna()) else np.nan),
             Agent=("Agent", lambda x: x.dropna().iloc[0] if len(x.dropna()) else np.nan)
         )
         .reset_index()
     )
+
+    closed_base["Brand"] = closed_base["Brand KPI Key"].apply(brand_display_name)
 
     # Create target-type rows so users can use the same Target Type filter in the dashboard.
     closed_target_types = (
@@ -4306,41 +4310,29 @@ else:
         on="_key"
     ).drop(columns="_key")
 
-    closed_month_performance_crates = (
-        closed_base
-        .merge(
-            metric_only(
-                closed_target_monthly.rename(columns={"Full_Month_Target": "Full_Month_Target"}),
-                ["Full_Month_Target"]
-            ),
-            how="left",
-            on=["Agent Key"]
-        )
-    )
-
-    # The metric_only helper aggregates without Month/Target Type, so do the monthly merges explicitly.
+    # Monthly merges by month + agent + brand + target type.
     closed_month_performance_crates = (
         closed_base
         .merge(
             closed_target_monthly[
-                ["Month Start", "Agent Key", "Target Type", "Full_Month_Target"]
+                ["Month Start", "Agent Key", "Brand KPI Key", "Target Type", "Full_Month_Target"]
             ],
             how="left",
-            on=["Month Start", "Agent Key", "Target Type"]
+            on=["Month Start", "Agent Key", "Brand KPI Key", "Target Type"]
         )
         .merge(
             closed_actual_monthly[
-                ["Month Start", "Agent Key", "Actual"]
+                ["Month Start", "Agent Key", "Brand KPI Key", "Actual"]
             ],
             how="left",
-            on=["Month Start", "Agent Key"]
+            on=["Month Start", "Agent Key", "Brand KPI Key"]
         )
         .merge(
             closed_py_monthly[
-                ["Month Start", "Agent Key", "PY"]
+                ["Month Start", "Agent Key", "Brand KPI Key", "PY"]
             ],
             how="left",
-            on=["Month Start", "Agent Key"]
+            on=["Month Start", "Agent Key", "Brand KPI Key"]
         )
     )
 
@@ -4377,6 +4369,25 @@ else:
     closed_month_performance["Month Number"] = closed_month_performance["Month Start"].dt.month
     closed_month_performance["Month Label"] = closed_month_performance["Month Start"].dt.strftime("%b %Y")
 
+    closed_month_brand_check = (
+        closed_month_performance[
+            closed_month_performance["UOM"] == "Crates"
+        ]
+        .groupby(["Month Label", "Brand", "Target Type"], dropna=False)
+        .agg(
+            Full_Month_Target=("Full_Month_Target", "sum"),
+            Actual=("Actual", "sum"),
+            PY=("PY", "sum")
+        )
+        .reset_index()
+        .sort_values(["Month Label", "Brand", "Target Type"])
+    )
+
+    print("=" * 120)
+    print("CLOSED MONTH BRAND CHECK")
+    print("=" * 120)
+    display(closed_month_brand_check)
+
     closed_month_performance = closed_month_performance[
         [
             "Month",
@@ -4384,6 +4395,7 @@ else:
             "Month Label",
             "Division",
             "Agent",
+            "Brand",
             "Target Type",
             "UOM",
             "Full_Month_Target",
