@@ -2728,102 +2728,82 @@
       URL.revokeObjectURL(url);
     }
 
-    function exportRegionalPerformanceCsv() {
-      const rows = calcPerformanceRows(filteredData, "Division").map(r => ({
-        Division: r.name,
-        MTD_Target: r.MTD_Target,
-        MTD_Shipment: r.MTD_Sales,
-        MTD_Achievement: r["MTD Ach"],
-        YTD_Target: r.YTD_Target,
-        YTD_Shipment: r.YTD_Sales,
-        YTD_Achievement: r["YTD Ach"],
-        YTD_Net_Achievement: r["YTD Net Ach"],
-        MTD_Depletion_Target: r.MTD_Target,
-        MTD_Depletion: r.MTD_Depletion,
-        MTD_Depletion_Achievement: r["MTD Depletion Ach"],
-        YTD_Depletion_Target: r.YTD_Target,
-        YTD_Depletion: r.YTD_Depletion,
-        YTD_Depletion_Achievement: r["YTD Depletion Ach"],
-        Days_of_Stock: r["Days of Stock"]
-      }));
 
-      downloadCsv(
-        "regional_performance.csv",
-        rows,
-        ["Division", "MTD_Target", "MTD_Shipment", "MTD_Achievement", "YTD_Target", "YTD_Shipment", "YTD_Achievement", "YTD_Net_Achievement", "MTD_Depletion_Target", "MTD_Depletion", "MTD_Depletion_Achievement", "YTD_Depletion_Target", "YTD_Depletion", "YTD_Depletion_Achievement", "Days_of_Stock"]
-      );
+    function cleanCellText(text) {
+      return String(text ?? "")
+        .replace(/\s+/g, " ")
+        .replace(/\u00A0/g, " ")
+        .trim();
+    }
+
+    function exportTableAsVisualCsv(tableId, filename) {
+      const table = $(tableId);
+      if (!table) {
+        alert("Table not found for export.");
+        return;
+      }
+
+      const bodyRows = [...table.querySelectorAll("tbody tr")];
+      if (!bodyRows.length) {
+        alert("No data available to export.");
+        return;
+      }
+
+      let columns = [];
+
+      const headerRows = [...table.querySelectorAll("thead tr")];
+
+      if (headerRows.length >= 2) {
+        // Handles closed-month matrix tables where Month is on row 1 and Target/Actual/PY/Ach% on row 2.
+        const firstRow = [...headerRows[0].children];
+        const secondRow = [...headerRows[1].children];
+
+        const firstHeader = cleanCellText(firstRow[0]?.textContent || "");
+        if (firstHeader) columns.push(firstHeader);
+
+        let secondIndex = 0;
+        firstRow.slice(1).forEach(th => {
+          const month = cleanCellText(th.textContent);
+          const span = parseInt(th.getAttribute("colspan") || "1", 10);
+
+          for (let i = 0; i < span; i++) {
+            const metric = cleanCellText(secondRow[secondIndex]?.textContent || "");
+            columns.push(`${month} ${metric}`.trim());
+            secondIndex++;
+          }
+        });
+      } else {
+        columns = [...table.querySelectorAll("thead th")].map(th => cleanCellText(th.textContent));
+      }
+
+      const rows = bodyRows.map(tr => {
+        const cells = [...tr.children].map(td => cleanCellText(td.textContent));
+        const row = {};
+        columns.forEach((col, i) => row[col || `Column ${i + 1}`] = cells[i] ?? "");
+        return row;
+      });
+
+      downloadCsv(filename, rows, columns);
+    }
+
+    function exportRegionalPerformanceCsv() {
+      exportTableAsVisualCsv("regionalTable", "regional_performance_visual.csv");
     }
 
     function exportBrandPerformanceCsv() {
-      const rows = calcBrandRows(filteredData, 9999).map(r => ({
-        Brand: r.Brand,
-        MTD_Target: r.MTD_Target,
-        MTD_Shipment: r.MTD_Sales,
-        MTD_Achievement: r["MTD Ach"],
-        YTD_Target: r.YTD_Target,
-        YTD_Shipment: r.YTD_Sales,
-        YTD_Achievement: r["YTD Ach"],
-        MTD_Depletion_Target: r.MTD_Target,
-        MTD_Depletion: r.MTD_Depletion,
-        MTD_Depletion_Achievement: r["MTD Depletion Ach"],
-        YTD_Depletion_Target: r.YTD_Target,
-        YTD_Depletion: r.YTD_Depletion,
-        YTD_Depletion_Achievement: r["YTD Depletion Ach"]
-      }));
-
-      downloadCsv(
-        "brand_performance.csv",
-        rows,
-        ["Brand", "MTD_Target", "MTD_Shipment", "MTD_Achievement", "YTD_Target", "YTD_Shipment", "YTD_Achievement", "MTD_Depletion_Target", "MTD_Depletion", "MTD_Depletion_Achievement", "YTD_Depletion_Target", "YTD_Depletion", "YTD_Depletion_Achievement"]
-      );
+      exportTableAsVisualCsv("brandRegionPerformanceTable", "brand_performance_visual.csv");
     }
 
     function exportDetailedReportCsv() {
-      const search = $("tableSearch") ? $("tableSearch").value.trim().toLowerCase() : "";
-      let view = aggregateForAgentTable(filteredData);
-
-      view = view.filter(r => {
-        if (!search) return true;
-        return ["Division", "Agent", "Target Type", "Stock Level Flag"]
-          .some(col => String(r[col] || "").toLowerCase().includes(search));
-      });
-
-      const detailedExcludedCols = new Set([
-        "Last_Day_PY",
-        "Last Day Sales vs PY",
-        "Last_Day_Depletion_PY",
-        "Last Day Depletion vs PY",
-        "WTD_PY",
-        "WTD Sales vs PY",
-        "WTD_Depletion_PY",
-        "WTD Depletion vs PY",
-        "Brand",
-        "UOM"
-      ]);
-
-      const cols = preferredCols.filter(c =>
-        rawData.length &&
-        c in rawData[0] &&
-        !detailedExcludedCols.has(c)
-      );
-
-      downloadCsv("detailed_report.csv", view, cols);
+      exportTableAsVisualCsv("dataTable", "detailed_report_visual.csv");
     }
 
     function exportClosedRegionCsv() {
-      const filters = currentSelections();
-      const view = closedMonthData.filter(r => matchesClosedMonth(r, filters));
-      const rows = aggregateClosedMonth(view, ["Division"]);
-      const matrix = closedMonthMatrixRows(rows, "Division");
-      downloadCsv("closed_month_by_region.csv", matrix.rows, matrix.columns);
+      exportTableAsVisualCsv("closedRegionTable", "closed_month_by_region_visual.csv");
     }
 
     function exportClosedBrandCsv() {
-      const filters = currentSelections();
-      const view = closedMonthData.filter(r => matchesClosedMonth(r, filters));
-      const rows = aggregateClosedMonth(view, ["Brand"]);
-      const matrix = closedMonthMatrixRows(rows, "Brand");
-      downloadCsv("closed_month_by_brand.csv", matrix.rows, matrix.columns);
+      exportTableAsVisualCsv("closedBrandTable", "closed_month_by_brand_visual.csv");
     }
 
     function applyFilters() {
