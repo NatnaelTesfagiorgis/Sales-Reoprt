@@ -1301,6 +1301,84 @@
       left: 0 !important;
     }
 
+  
+    /* Regional Performance: show all regions without vertical scrolling */
+    .performance-grid .mini-table-panel:first-child {
+      overflow: visible;
+      min-height: auto;
+    }
+
+    .performance-grid .mini-table-panel:first-child .mini-table-wrap {
+      max-height: none !important;
+      overflow-y: visible !important;
+      overflow-x: auto;
+    }
+
+    #regionalTable tbody tr {
+      height: auto;
+    }
+
+    #regionalTable td,
+    #regionalTable th {
+      padding-top: 7px;
+      padding-bottom: 7px;
+    }
+
+  
+    /* Regional view: YTD Net Achievement number column */
+    #regionalTable td.kpi-section-start {
+      font-weight: 800;
+    }
+
+  
+    /* Stack Brand Performance below Regional Performance */
+    .performance-grid {
+      grid-template-columns: 1fr !important;
+    }
+
+    .performance-grid .mini-table-panel {
+      width: 100%;
+    }
+
+    .performance-grid .mini-table-wrap {
+      max-height: none;
+      overflow-y: visible;
+      overflow-x: auto;
+    }
+
+  
+    /* Regional view: conditional formatting for YTD Net Achievement */
+    td.net-ach-cell {
+      font-weight: 900;
+      border-radius: 10px;
+      text-align: right;
+    }
+
+    td.net-ach-cell.good {
+      background: #e8f7ee;
+      color: #146c34;
+    }
+
+    td.net-ach-cell.bad {
+      background: #fde8e6;
+      color: #b42318;
+    }
+
+    td.net-ach-cell.warn {
+      background: #fff4d6;
+      color: #8a5f00;
+    }
+
+  
+    /* Closed Month Analysis: Brand visual below Region visual */
+    .closed-month-grid {
+      grid-template-columns: 1fr !important;
+    }
+
+    .closed-month-grid .closed-month-panel {
+      width: 100%;
+    }
+
   </style>
 </head>
 
@@ -1786,19 +1864,19 @@
       return r;
     }
 
-    function formatNumber(n, maxDecimals = 2) {
+    function formatNumber(n, maxDecimals = 0) {
       if (!Number.isFinite(n)) return "0";
       return n.toLocaleString(undefined, {
         minimumFractionDigits: 0,
-        maximumFractionDigits: maxDecimals
+        maximumFractionDigits: 0
       });
     }
 
     function formatPct(n) {
-      if (!Number.isFinite(n)) return "0.0%";
+      if (!Number.isFinite(n)) return "0%";
       return (n * 100).toLocaleString(undefined, {
-        minimumFractionDigits: 1,
-        maximumFractionDigits: 1,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
         signDisplay: "exceptZero"
       }) + "%";
     }
@@ -2130,6 +2208,12 @@
 
     function csvEscape(value) {
       if (value === null || value === undefined) return "";
+      if (typeof value === "number" && Number.isFinite(value)) {
+        return Math.round(value).toLocaleString(undefined, {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0
+        });
+      }
       const text = String(value);
       if (/[",\n\r]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
       return text;
@@ -2165,6 +2249,7 @@
         YTD_Target: r.YTD_Target,
         YTD_Shipment: r.YTD_Sales,
         YTD_Achievement: r["YTD Ach"],
+        YTD_Net_Achievement: r["YTD Net Ach"],
         MTD_Depletion_Target: r.MTD_Target,
         MTD_Depletion: r.MTD_Depletion,
         MTD_Depletion_Achievement: r["MTD Depletion Ach"],
@@ -2177,7 +2262,7 @@
       downloadCsv(
         "regional_performance.csv",
         rows,
-        ["Division", "MTD_Target", "MTD_Shipment", "MTD_Achievement", "YTD_Target", "YTD_Shipment", "YTD_Achievement", "MTD_Depletion_Target", "MTD_Depletion", "MTD_Depletion_Achievement", "YTD_Depletion_Target", "YTD_Depletion", "YTD_Depletion_Achievement", "Days_of_Stock"]
+        ["Division", "MTD_Target", "MTD_Shipment", "MTD_Achievement", "YTD_Target", "YTD_Shipment", "YTD_Achievement", "YTD_Net_Achievement", "MTD_Depletion_Target", "MTD_Depletion", "MTD_Depletion_Achievement", "YTD_Depletion_Target", "YTD_Depletion", "YTD_Depletion_Achievement", "Days_of_Stock"]
       );
     }
 
@@ -2347,6 +2432,7 @@
         r["MTD Ach"] = r.MTD_Target === 0 ? 0 : (r.MTD_Sales / r.MTD_Target) - 1;
         r["MTD Depletion Ach"] = r.MTD_Target === 0 ? 0 : (r.MTD_Depletion / r.MTD_Target) - 1;
         r["YTD Ach"] = r.YTD_Target === 0 ? 0 : (r.YTD_Sales / r.YTD_Target) - 1;
+        r["YTD Net Ach"] = r.YTD_Sales - r.YTD_Target;
         r["YTD Depletion Ach"] = r.YTD_Target === 0 ? 0 : (r.YTD_Depletion / r.YTD_Target) - 1;
         r["Days of Stock"] = r.Avg_Daily_Depletion === 0 ? 0 : r.Stock_per_Agent / r.Avg_Daily_Depletion;
         return r;
@@ -2367,7 +2453,7 @@
       const classes = [];
       // Add visual spacing between KPI groups in regional and brand performance visuals.
       // Columns are: Name, MTD Sipm, Ach%, YTD Sipm, Ach%, MTD Dip, Ach%, YTD Dip, Ach%, Days Stock
-      if (["MTD Target", "YTD Target", "MTD Dip Target", "YTD Dip Target", "Days Stock"].includes(col)) {
+      if (["MTD Target", "YTD Target", "YTD Net Ach", "MTD Dip Target", "YTD Dip Target", "Days Stock"].includes(col)) {
         classes.push("kpi-section-start");
       }
       if (isAchievementColumn(col)) classes.push("ach-col");
@@ -2380,6 +2466,7 @@
         "MTD Sipm": "MTD<br>Ship.",
         "YTD Target": "YTD<br>Target",
         "YTD Sipm": "YTD<br>Ship.",
+        "YTD Net Ach": "YTD Net<br>Ach",
         "MTD Dip Target": "MTD Depl.<br>Target",
         "MTD Dip": "MTD<br>Depl.",
         "YTD Dip Target": "YTD Depl.<br>Target",
@@ -2419,7 +2506,7 @@ function renderMiniPerformanceTable(tableId, rows, firstColName, mode = "regiona
 
       const cols = mode === "brand"
         ? ["Brand", "MTD Target", "MTD Sipm", "Ach%", "YTD Target", "YTD Sipm", "Ach%", "MTD Dip Target", "MTD Dip", "Ach%", "YTD Dip Target", "YTD Dip", "Ach%"]
-        : [firstColName, "MTD Target", "MTD Sipm", "Ach%", "YTD Target", "YTD Sipm", "Ach%", "MTD Dip Target", "MTD Dip", "Ach%", "YTD Dip Target", "YTD Dip", "Ach%", "Days Stock"];
+        : [firstColName, "MTD Target", "MTD Sipm", "Ach%", "YTD Target", "YTD Sipm", "Ach%", "YTD Net Ach", "MTD Dip Target", "MTD Dip", "Ach%", "YTD Dip Target", "YTD Dip", "Ach%", "Days Stock"];
 
       table.querySelector("thead").innerHTML = `<tr>${cols.map((c, i) => `<th class="${miniTableCellClass(c, i)}">${shortHeaderName(c)}</th>`).join("")}</tr>`;
 
@@ -2453,13 +2540,14 @@ function renderMiniPerformanceTable(tableId, rows, firstColName, mode = "regiona
             <td class="kpi-section-start">${formatNumber(r.YTD_Target)}</td>
             <td>${formatNumber(r.YTD_Sales)}</td>
             <td class="ach-cell ${achClass(r["YTD Ach"])}">${formatPct(r["YTD Ach"])}</td>
+            <td class="kpi-section-start net-ach-cell ${achClass(r["YTD Net Ach"])}">${formatNumber(r["YTD Net Ach"])}</td>
             <td class="kpi-section-start">${formatNumber(r.MTD_Target)}</td>
             <td>${formatNumber(r.MTD_Depletion)}</td>
             <td class="ach-cell ${achClass(r["MTD Depletion Ach"])}">${formatPct(r["MTD Depletion Ach"])}</td>
             <td class="kpi-section-start">${formatNumber(r.YTD_Target)}</td>
             <td>${formatNumber(r.YTD_Depletion)}</td>
             <td class="ach-cell ${achClass(r["YTD Depletion Ach"])}">${formatPct(r["YTD Depletion Ach"])}</td>
-            <td class="kpi-section-start">${formatNumber(r["Days of Stock"], 1)}</td>
+            <td class="kpi-section-start">${formatNumber(r["Days of Stock"])}</td>
           </tr>
         `;
       }).join("");
