@@ -1671,9 +1671,8 @@
       }
     }
 
-
   
-    /* Mobile scroll and bottom upload fix */
+    /* Mobile fix: keep charts normal, make tables scrollable, upload at bottom */
     @media (max-width: 768px) {
       .bottom-upload-panel {
         display: flex !important;
@@ -1688,56 +1687,54 @@
         max-width: none !important;
       }
 
-      .panel,
-      .mini-table-panel,
-      .closed-month-panel,
-      .table-panel,
-      .card,
-      .combo-card,
-      .stock-card {
-        overflow: visible !important;
-      }
-
       .mini-table-wrap,
       .closed-month-wrap,
       .table-wrap {
+        display: block !important;
         width: 100% !important;
+        max-width: 100% !important;
         overflow-x: auto !important;
         overflow-y: auto !important;
         -webkit-overflow-scrolling: touch !important;
-        touch-action: pan-x pan-y !important;
+        touch-action: auto !important;
       }
 
-      .panel canvas {
-        width: 100% !important;
-        min-width: 620px !important;
-      }
-
-      .panel:has(canvas) {
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch !important;
-      }
-
-      #regionalTable,
-      #brandRegionPerformanceTable,
-      #closedRegionTable,
-      #closedBrandTable,
-      #dataTable {
+      .mini-table-wrap table,
+      .closed-month-wrap table,
+      .table-wrap table {
         width: max-content !important;
+        max-width: none !important;
+        table-layout: auto !important;
       }
 
       #regionalTable,
       #brandRegionPerformanceTable {
-        min-width: 1050px !important;
+        min-width: 980px !important;
       }
 
       #closedRegionTable,
       #closedBrandTable {
-        min-width: 1150px !important;
+        min-width: 1050px !important;
       }
 
       #dataTable {
-        min-width: 1350px !important;
+        min-width: 1250px !important;
+      }
+
+      .panel:has(canvas) {
+        overflow: hidden !important;
+      }
+
+      canvas {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        height: 260px !important;
+        max-height: 260px !important;
+      }
+
+      .grid .panel {
+        min-height: 310px !important;
       }
 
       .load-status-bottom {
@@ -1748,16 +1745,21 @@
     @media (max-width: 420px) {
       #regionalTable,
       #brandRegionPerformanceTable {
-        min-width: 1000px !important;
+        min-width: 940px !important;
       }
 
       #closedRegionTable,
       #closedBrandTable {
-        min-width: 1100px !important;
+        min-width: 1000px !important;
       }
 
       #dataTable {
-        min-width: 1280px !important;
+        min-width: 1180px !important;
+      }
+
+      canvas {
+        height: 240px !important;
+        max-height: 240px !important;
       }
     }
 
@@ -1775,7 +1777,8 @@
         </div>
       </div>
     </header>
-<div class="pattern-strip"></div>
+
+    <div class="pattern-strip"></div>
 
     <section class="filters">
       <div class="filter-group">
@@ -1984,9 +1987,7 @@
   </div>
 
   <script>
-    if (window.Chart && window.ChartDataLabels) {
-      Chart.register(ChartDataLabels);
-    }
+    Chart.register(ChartDataLabels);
 
     const GOLD = "#c99a2e";
     const GOLD_DARK = "#9f7418";
@@ -2964,17 +2965,6 @@ function renderMiniPerformanceTable(tableId, rows, firstColName, mode = "regiona
     function makeBarChart(canvasId, items, title, options = {}) {
       const canvas = $(canvasId);
       if (!canvas) return;
-      if (!window.Chart) {
-        const parent = canvas.parentElement;
-        if (parent && !parent.querySelector(".chart-fallback")) {
-          const msg = document.createElement("div");
-          msg.className = "chart-fallback";
-          msg.textContent = "Chart library did not load. Tables and filters are still available.";
-          msg.style.cssText = "padding:12px;border:1px solid #f0ead9;border-radius:12px;background:#fffaf0;color:#6f4b08;font-weight:700;font-size:12px;";
-          parent.appendChild(msg);
-        }
-        return;
-      }
       destroyChart(canvasId);
 
       charts[canvasId] = new Chart(canvas, {
@@ -3277,11 +3267,6 @@ function renderTable(data) {
     }
 
     function loadDefaultCsv() {
-      if (!window.Papa) {
-        setStatus("Required CSV library did not load. On phone, make sure internet is available and open in Chrome/Safari, not inside WhatsApp preview.", "error");
-        return;
-      }
-
       Papa.parse("final_kpi_report.csv", {
         download: true,
         header: true,
@@ -3289,24 +3274,19 @@ function renderTable(data) {
         transformHeader: normalizeHeader,
         complete: (results) => {
           if (results.data && results.data.length) loadData(results.data);
-          else setStatus("Tap upload and select final_kpi_report.csv to activate the dashboard on mobile.", "success");
+          else setStatus("Default final_kpi_report.csv was not found beside the HTML. Use the upload button.", "");
         },
         error: () => {
-          setStatus("Tap upload and select final_kpi_report.csv to activate the dashboard on mobile.", "success");
+          setStatus("Default final_kpi_report.csv was not found beside the HTML. Use the upload button.", "");
         }
       });
     }
 
-    function handleCsvFileChange(e) {
+    $("csvFile").addEventListener("change", (e) => {
       const file = e.target.files[0];
       if (!file) return;
 
-      if (!window.Papa) {
-        setStatus("CSV reader did not load. Make sure the phone has internet access, then refresh and upload again.", "error");
-        return;
-      }
-
-      setStatus("Reading " + file.name + "...", "success");
+      setStatus("Reading " + file.name + "...", "");
 
       Papa.parse(file, {
         header: true,
@@ -3320,11 +3300,6 @@ function renderTable(data) {
           setStatus("Could not read the selected CSV file: " + err.message, "error");
         }
       });
-    }
-
-    ["csvFile"].forEach(id => {
-      const el = $(id);
-      if (el) el.addEventListener("change", handleCsvFileChange);
     });
 
     ["divisionFilter", "agentFilter", "brandFilter", "uomFilter", "targetFilter"].forEach(id => {
