@@ -1850,6 +1850,24 @@
       color: var(--warn);
     }
 
+  
+    /* Detailed Report: taller view to accommodate about 22 rows */
+    .table-wrap {
+      max-height: 760px !important;
+    }
+
+    #dataTable td,
+    #dataTable th {
+      padding-top: 8px;
+      padding-bottom: 8px;
+    }
+
+    @media (max-width: 768px) {
+      .table-wrap {
+        max-height: 720px !important;
+      }
+    }
+
   </style>
 </head>
 
