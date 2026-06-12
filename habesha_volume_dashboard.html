@@ -1145,27 +1145,7 @@
       z-index: 7;
       background: #fff4cf;
     }
-
-    #closedBrandTable th:nth-child(2),
-    #closedBrandTable td:nth-child(2) {
-      position: sticky;
-      left: 70px;
-      z-index: 4;
-      background: #fffdf7;
-      box-shadow: 8px 0 10px rgba(80, 55, 5, 0.10);
-      font-weight: 800;
-      min-width: 130px;
-      max-width: 130px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    #closedBrandTable th:nth-child(2) {
-      z-index: 7;
-      background: #fff4cf;
-    }
-
-    #closedRegionTable th.closed-section-start,
+#closedRegionTable th.closed-section-start,
     #closedRegionTable td.closed-section-start,
     #closedBrandTable th.closed-section-start,
     #closedBrandTable td.closed-section-start {
@@ -1256,6 +1236,69 @@
     #closedBrandTable th.closed-section-start,
     #closedBrandTable td.closed-section-start {
       border-left: 10px solid #d6b24a;
+    }
+
+  
+    /* Closed month matrix: keep Region/Brand fixed and put months across columns */
+    .closed-month-wrap {
+      max-height: 430px;
+    }
+
+    #closedRegionTable thead tr:first-child th,
+    #closedBrandTable thead tr:first-child th {
+      text-align: center;
+    }
+
+    #closedRegionTable th.closed-month-head,
+    #closedBrandTable th.closed-month-head {
+      background: #f7df99;
+      border-left: 10px solid #d6b24a;
+      font-weight: 900;
+    }
+
+    #closedRegionTable .closed-sticky-main,
+    #closedBrandTable .closed-sticky-main {
+      position: sticky;
+      left: 0;
+      z-index: 8;
+      background: #fffdf7;
+      box-shadow: 8px 0 10px rgba(80, 55, 5, 0.10);
+      font-weight: 900;
+      min-width: 135px;
+      max-width: 170px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #closedRegionTable thead .closed-sticky-main,
+    #closedBrandTable thead .closed-sticky-main {
+      z-index: 12;
+      background: #fff4cf;
+    }
+
+  
+    /* Matrix fix: only Region/Brand column is fixed; month columns must scroll */
+    #closedBrandTable th:nth-child(2),
+    #closedBrandTable td:nth-child(2) {
+      position: static !important;
+      left: auto !important;
+      box-shadow: none !important;
+      min-width: auto !important;
+      max-width: none !important;
+    }
+
+    #closedRegionTable th.closed-month-head,
+    #closedRegionTable td.closed-section-start,
+    #closedBrandTable th.closed-month-head,
+    #closedBrandTable td.closed-section-start {
+      position: static !important;
+      left: auto !important;
+    }
+
+    #closedRegionTable .closed-sticky-main,
+    #closedBrandTable .closed-sticky-main {
+      position: sticky !important;
+      left: 0 !important;
     }
 
   </style>
@@ -1895,47 +1938,177 @@
         });
     }
 
-    function renderClosedTable(tableId, rows, groupCols) {
+    function closedMonthMetricCols() {
+      return [
+        { key: "Full_Month_Target", label: "Target", type: "number" },
+        { key: "Actual", label: "Actual", type: "number" },
+        { key: "PY", label: "PY", type: "number" },
+        { key: "Achievement %", label: "Ach%", type: "pct" },
+        { key: "Actual vs PY %", label: "Vs PY%", type: "pct" }
+      ];
+    }
+
+    function renderClosedMonthMatrix(tableId, rows, groupCol) {
       const table = $(tableId);
       if (!table) return;
 
-      const cols = [...groupCols, "Month Label", "Full_Month_Target", "Actual", "PY", "Achievement %", "Actual vs PY %"];
-      const headerNames = {
-        "Month Label": "Month",
-        "Full_Month_Target": "Full Month<br>Target",
-        "Actual": "Actual",
-        "PY": "PY",
-        "Achievement %": "Ach%",
-        "Actual vs PY %": "Vs PY%"
-      };
+      const months = [...new Map(
+        rows
+          .filter(r => r["Month Label"])
+          .sort((a, b) => toNum(a["Month Number"]) - toNum(b["Month Number"]))
+          .map(r => [r["Month Label"], { label: r["Month Label"], number: r["Month Number"] }])
+      ).values()];
 
-      table.querySelector("thead").innerHTML =
-        `<tr>${cols.map(c => `<th class="${closedMonthCellClass(c)}">${headerNames[c] || escapeHtml(c)}</th>`).join("")}</tr>`;
+      const metrics = closedMonthMetricCols();
+      const firstHeader = groupCol === "Division" ? "Region" : groupCol;
 
-      if (!rows.length) {
+      if (!rows.length || !months.length) {
+        table.querySelector("thead").innerHTML = `<tr><th>${escapeHtml(firstHeader)}</th></tr>`;
         table.querySelector("tbody").innerHTML =
-          `<tr><td colspan="${cols.length}">No closed month data found. Run Python to regenerate final_kpi_report.csv.</td></tr>`;
+          `<tr><td>No closed month data found. Run Python to regenerate final_kpi_report.csv.</td></tr>`;
         return;
       }
 
-      table.querySelector("tbody").innerHTML = rows.map(r => {
-        return `<tr>${cols.map(c => {
-          const cls = closedMonthCellClass(c);
-          let val = r[c];
+      const groups = [...new Set(rows.map(r => r[groupCol] || "Unknown"))]
+        .sort((a, b) => String(a).localeCompare(String(b)));
 
-          if (["Achievement %", "Actual vs PY %"].includes(c)) {
-            return `<td class="${cls} ach-cell ${achClass(val)}">${formatPct(val)}</td>`;
-          }
+      const matrix = new Map();
+      rows.forEach(r => {
+        const g = r[groupCol] || "Unknown";
+        const m = r["Month Label"];
+        const key = `${g}||${m}`;
 
-          if (["Full_Month_Target", "Actual", "PY"].includes(c)) {
-            val = formatNumber(val);
-          } else {
-            val = escapeHtml(val);
-          }
+        if (!matrix.has(key)) {
+          matrix.set(key, {
+            Full_Month_Target: 0,
+            Actual: 0,
+            PY: 0
+          });
+        }
 
-          return `<td class="${cls}">${val}</td>`;
-        }).join("")}</tr>`;
+        const item = matrix.get(key);
+        item.Full_Month_Target += toNum(r.Full_Month_Target);
+        item.Actual += toNum(r.Actual);
+        item.PY += toNum(r.PY);
+      });
+
+      matrix.forEach(item => {
+        item["Achievement %"] = item.Full_Month_Target === 0 ? 0 : (item.Actual / item.Full_Month_Target) - 1;
+        item["Actual vs PY %"] = item.PY === 0 ? 0 : (item.Actual / item.PY) - 1;
+      });
+
+      table.querySelector("thead").innerHTML = `
+        <tr>
+          <th rowspan="2" class="closed-sticky-main">${escapeHtml(firstHeader)}</th>
+          ${months.map(m => `<th colspan="${metrics.length}" class="closed-month-head">${escapeHtml(m.label)}</th>`).join("")}
+        </tr>
+        <tr>
+          ${months.map(m => metrics.map(metric =>
+            `<th class="${metric.key === "Full_Month_Target" ? "closed-section-start" : ""}">${metric.label}</th>`
+          ).join("")).join("")}
+        </tr>
+      `;
+
+      table.querySelector("tbody").innerHTML = groups.map(g => {
+        const cells = [`<td class="closed-sticky-main">${escapeHtml(g)}</td>`];
+
+        months.forEach(m => {
+          const item = matrix.get(`${g}||${m.label}`) || {
+            Full_Month_Target: 0,
+            Actual: 0,
+            PY: 0,
+            "Achievement %": 0,
+            "Actual vs PY %": 0
+          };
+
+          metrics.forEach(metric => {
+            const sectionCls = metric.key === "Full_Month_Target" ? "closed-section-start" : "";
+            if (metric.type === "pct") {
+              const val = item[metric.key];
+              cells.push(`<td class="${sectionCls} ach-cell ${achClass(val)}">${formatPct(val)}</td>`);
+            } else {
+              cells.push(`<td class="${sectionCls}">${formatNumber(item[metric.key])}</td>`);
+            }
+          });
+        });
+
+        return `<tr>${cells.join("")}</tr>`;
       }).join("");
+    }
+
+    function closedMonthMatrixRows(rows, groupCol) {
+      const months = [...new Map(
+        rows
+          .filter(r => r["Month Label"])
+          .sort((a, b) => toNum(a["Month Number"]) - toNum(b["Month Number"]))
+          .map(r => [r["Month Label"], { label: r["Month Label"], number: r["Month Number"] }])
+      ).values()];
+
+      const groups = [...new Set(rows.map(r => r[groupCol] || "Unknown"))]
+        .sort((a, b) => String(a).localeCompare(String(b)));
+
+      const metrics = closedMonthMetricCols();
+
+      const matrix = new Map();
+      rows.forEach(r => {
+        const g = r[groupCol] || "Unknown";
+        const m = r["Month Label"];
+        const key = `${g}||${m}`;
+
+        if (!matrix.has(key)) {
+          matrix.set(key, {
+            Full_Month_Target: 0,
+            Actual: 0,
+            PY: 0
+          });
+        }
+
+        const item = matrix.get(key);
+        item.Full_Month_Target += toNum(r.Full_Month_Target);
+        item.Actual += toNum(r.Actual);
+        item.PY += toNum(r.PY);
+      });
+
+      matrix.forEach(item => {
+        item["Achievement %"] = item.Full_Month_Target === 0 ? 0 : (item.Actual / item.Full_Month_Target) - 1;
+        item["Actual vs PY %"] = item.PY === 0 ? 0 : (item.Actual / item.PY) - 1;
+      });
+
+      const displayGroupCol = groupCol === "Division" ? "Region" : groupCol;
+      const columns = [displayGroupCol];
+      months.forEach(m => {
+        metrics.forEach(metric => {
+          columns.push(`${m.label} ${metric.label}`);
+        });
+      });
+
+      const outputRows = groups.map(g => {
+        const row = {};
+        row[displayGroupCol] = g;
+
+        months.forEach(m => {
+          const item = matrix.get(`${g}||${m.label}`) || {
+            Full_Month_Target: 0,
+            Actual: 0,
+            PY: 0,
+            "Achievement %": 0,
+            "Actual vs PY %": 0
+          };
+
+          metrics.forEach(metric => {
+            row[`${m.label} ${metric.label}`] = item[metric.key];
+          });
+        });
+
+        return row;
+      });
+
+      return { rows: outputRows, columns };
+    }
+
+    function renderClosedTable(tableId, rows, groupCols) {
+      const groupCol = groupCols[0];
+      renderClosedMonthMatrix(tableId, rows, groupCol);
     }
 
     function updateClosedMonthTables() {
@@ -1945,8 +2118,8 @@
       const regionRows = aggregateClosedMonth(view, ["Division"]);
       const brandRows = aggregateClosedMonth(view, ["Brand"]);
 
-      renderClosedTable("closedRegionTable", regionRows, ["Division"]);
-      renderClosedTable("closedBrandTable", brandRows, ["Brand"]);
+      renderClosedMonthMatrix("closedRegionTable", regionRows, "Division");
+      renderClosedMonthMatrix("closedBrandTable", brandRows, "Brand");
     }
 
     function loadClosedMonthCsv() {
@@ -2068,22 +2241,16 @@
       const filters = currentSelections();
       const view = closedMonthData.filter(r => matchesClosedMonth(r, filters));
       const rows = aggregateClosedMonth(view, ["Division"]);
-      downloadCsv(
-        "closed_month_by_region.csv",
-        rows,
-        ["Division", "Month Label", "Full_Month_Target", "Actual", "PY", "Achievement %", "Actual vs PY %"]
-      );
+      const matrix = closedMonthMatrixRows(rows, "Division");
+      downloadCsv("closed_month_by_region.csv", matrix.rows, matrix.columns);
     }
 
     function exportClosedBrandCsv() {
       const filters = currentSelections();
       const view = closedMonthData.filter(r => matchesClosedMonth(r, filters));
       const rows = aggregateClosedMonth(view, ["Brand"]);
-      downloadCsv(
-        "closed_month_by_brand.csv",
-        rows,
-        ["Brand", "Month Label", "Full_Month_Target", "Actual", "PY", "Achievement %", "Actual vs PY %"]
-      );
+      const matrix = closedMonthMatrixRows(rows, "Brand");
+      downloadCsv("closed_month_by_brand.csv", matrix.rows, matrix.columns);
     }
 
     function applyFilters() {
