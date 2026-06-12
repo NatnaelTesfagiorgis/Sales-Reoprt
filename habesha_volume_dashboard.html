@@ -1763,6 +1763,79 @@
       }
     }
 
+  
+    /* FINAL MOBILE FIX: Regional and Brand Performance horizontal scroll */
+    @media (max-width: 768px) {
+      .performance-grid {
+        display: block !important;
+      }
+
+      .performance-grid .mini-table-panel {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
+        margin-bottom: 12px !important;
+      }
+
+      .performance-grid .mini-table-wrap {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: scroll !important;
+        overflow-y: visible !important;
+        -webkit-overflow-scrolling: touch !important;
+        touch-action: pan-x pan-y !important;
+        overscroll-behavior-x: contain !important;
+      }
+
+      #regionalTable,
+      #brandRegionPerformanceTable {
+        display: table !important;
+        table-layout: auto !important;
+        width: 1180px !important;
+        min-width: 1180px !important;
+        max-width: none !important;
+      }
+
+      #regionalTable th,
+      #regionalTable td,
+      #brandRegionPerformanceTable th,
+      #brandRegionPerformanceTable td {
+        white-space: nowrap !important;
+        min-width: 74px !important;
+        max-width: none !important;
+      }
+
+      #regionalTable th:first-child,
+      #regionalTable td:first-child,
+      #brandRegionPerformanceTable th:first-child,
+      #brandRegionPerformanceTable td:first-child {
+        position: sticky !important;
+        left: 0 !important;
+        z-index: 20 !important;
+        min-width: 105px !important;
+        max-width: 125px !important;
+        background: #fffdf7 !important;
+        box-shadow: 7px 0 9px rgba(80, 55, 5, 0.10) !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+      }
+
+      #regionalTable th:first-child,
+      #brandRegionPerformanceTable th:first-child {
+        background: #fff4cf !important;
+        z-index: 30 !important;
+      }
+    }
+
+    @media (max-width: 420px) {
+      #regionalTable,
+      #brandRegionPerformanceTable {
+        width: 1120px !important;
+        min-width: 1120px !important;
+      }
+    }
+
   </style>
 </head>
 
