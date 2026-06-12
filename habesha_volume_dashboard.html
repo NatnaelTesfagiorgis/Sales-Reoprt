@@ -1836,6 +1836,20 @@
       }
     }
 
+  
+    /* Card variance vs target number */
+    .combo-line strong.good {
+      color: var(--good);
+    }
+
+    .combo-line strong.bad {
+      color: var(--bad);
+    }
+
+    .combo-line strong.warn {
+      color: var(--warn);
+    }
+
   </style>
 </head>
 
@@ -1882,18 +1896,21 @@
         <div class="label">Last Day Shipment</div>
         <div id="lastDaySalesCard" class="value">0</div>
         <div class="combo-line"><span>Vs Target</span><strong id="lastDaySalesAchCard">0%</strong></div>
+        <div class="combo-line"><span>Variance</span><strong id="lastDaySalesVarCard">0</strong></div>
       </div>
 
       <div class="card combo-card">
         <div class="label">WTD Shipment</div>
         <div id="wtdSalesCard" class="value">0</div>
         <div class="combo-line"><span>Vs Target</span><strong id="wtdSalesAchCard">0%</strong></div>
+        <div class="combo-line"><span>Variance</span><strong id="wtdSalesVarCard">0</strong></div>
       </div>
 
       <div class="card combo-card">
         <div class="label">MTD Shipment</div>
         <div id="mtdSalesCard" class="value">0</div>
         <div class="combo-line"><span>Vs Target</span><strong id="mtdAchCard">0%</strong></div>
+        <div class="combo-line"><span>Variance</span><strong id="mtdSalesVarCard">0</strong></div>
         <div class="combo-line"><span>Growth vs PY</span><strong id="mtdSalesPyCard">0%</strong></div>
       </div>
 
@@ -1901,6 +1918,7 @@
         <div class="label">YTD Shipment</div>
         <div id="ytdSalesCard" class="value">0</div>
         <div class="combo-line"><span>Vs Target</span><strong id="ytdAchCard">0%</strong></div>
+        <div class="combo-line"><span>Variance</span><strong id="ytdSalesVarCard">0</strong></div>
         <div class="combo-line"><span>Growth vs PY</span><strong id="ytdSalesPyCard">0%</strong></div>
       </div>
     </section>
@@ -1911,18 +1929,21 @@
         <div class="label">Last Day Depletion</div>
         <div id="lastDayDepletionCard" class="value">0</div>
         <div class="combo-line"><span>Vs Target</span><strong id="lastDayDepletionAchCard">0%</strong></div>
+        <div class="combo-line"><span>Variance</span><strong id="lastDayDepletionVarCard">0</strong></div>
       </div>
 
       <div class="card combo-card">
         <div class="label">WTD Depletion</div>
         <div id="wtdDepletionCard" class="value">0</div>
         <div class="combo-line"><span>Vs Target</span><strong id="wtdDepletionAchCard">0%</strong></div>
+        <div class="combo-line"><span>Variance</span><strong id="wtdDepletionVarCard">0</strong></div>
       </div>
 
       <div class="card combo-card">
         <div class="label">MTD Depletion</div>
         <div id="mtdDepletionCard" class="value">0</div>
         <div class="combo-line"><span>Vs Target</span><strong id="mtdDepletionAchCard">0%</strong></div>
+        <div class="combo-line"><span>Variance</span><strong id="mtdDepletionVarCard">0</strong></div>
         <div class="combo-line"><span>Growth vs PY</span><strong id="mtdDepletionPyCard">0%</strong></div>
       </div>
 
@@ -1930,6 +1951,7 @@
         <div class="label">YTD Depletion</div>
         <div id="ytdDepletionCard" class="value">0</div>
         <div class="combo-line"><span>Vs Target</span><strong id="ytdDepletionAchCard">0%</strong></div>
+        <div class="combo-line"><span>Variance</span><strong id="ytdDepletionVarCard">0</strong></div>
         <div class="combo-line"><span>Growth vs PY</span><strong id="ytdDepletionPyCard">0%</strong></div>
       </div>
     </section>
@@ -2326,6 +2348,15 @@
       return n.toLocaleString(undefined, {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
+      });
+    }
+
+    function formatSignedNumber(n) {
+      if (!Number.isFinite(n)) return "0";
+      return n.toLocaleString(undefined, {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+        signDisplay: "exceptZero"
       });
     }
 
@@ -2815,29 +2846,32 @@
     }
 
     function updateCards(data) {
-      function setCard(valueId, achId, pyId, valueCol, targetCol, pyCol) {
+      function setCard(valueId, achId, varId, pyId, valueCol, targetCol, pyCol) {
         const value = sum(data, valueCol);
         const target = sum(data, targetCol);
         const py = sum(data, pyCol);
         const ach = target === 0 ? 0 : (value / target) - 1;
+        const variance = value - target;
         const growth = py === 0 ? 0 : (value / py) - 1;
 
         if ($(valueId)) $(valueId).textContent = formatNumber(value);
         if ($(achId)) $(achId).textContent = formatPct(ach);
+        if ($(varId)) $(varId).textContent = formatSignedNumber(variance);
         if ($(pyId)) $(pyId).textContent = formatPct(growth);
         setValueClass($(achId), ach);
+        setValueClass($(varId), variance);
         setValueClass($(pyId), growth);
       }
 
-      setCard("lastDaySalesCard", "lastDaySalesAchCard", "lastDaySalesPyCard", "Last_Day_Sales", "Last_Day_Target", "Last_Day_PY");
-      setCard("wtdSalesCard", "wtdSalesAchCard", "wtdSalesPyCard", "WTD_Sales", "WTD_Target", "WTD_PY");
-      setCard("mtdSalesCard", "mtdAchCard", "mtdSalesPyCard", "MTD_Sales", "MTD_Target", "MTD_PY");
-      setCard("ytdSalesCard", "ytdAchCard", "ytdSalesPyCard", "YTD_Sales", "YTD_Target", "YTD_PY");
+      setCard("lastDaySalesCard", "lastDaySalesAchCard", "lastDaySalesVarCard", "lastDaySalesPyCard", "Last_Day_Sales", "Last_Day_Target", "Last_Day_PY");
+      setCard("wtdSalesCard", "wtdSalesAchCard", "wtdSalesVarCard", "wtdSalesPyCard", "WTD_Sales", "WTD_Target", "WTD_PY");
+      setCard("mtdSalesCard", "mtdAchCard", "mtdSalesVarCard", "mtdSalesPyCard", "MTD_Sales", "MTD_Target", "MTD_PY");
+      setCard("ytdSalesCard", "ytdAchCard", "ytdSalesVarCard", "ytdSalesPyCard", "YTD_Sales", "YTD_Target", "YTD_PY");
 
-      setCard("lastDayDepletionCard", "lastDayDepletionAchCard", "lastDayDepletionPyCard", "Last_Day_Depletion", "Last_Day_Target", "Last_Day_Depletion_PY");
-      setCard("wtdDepletionCard", "wtdDepletionAchCard", "wtdDepletionPyCard", "WTD_Depletion", "WTD_Target", "WTD_Depletion_PY");
-      setCard("mtdDepletionCard", "mtdDepletionAchCard", "mtdDepletionPyCard", "MTD_Depletion", "MTD_Target", "MTD_Depletion_PY");
-      setCard("ytdDepletionCard", "ytdDepletionAchCard", "ytdDepletionPyCard", "YTD_Depletion", "YTD_Target", "YTD_Depletion_PY");
+      setCard("lastDayDepletionCard", "lastDayDepletionAchCard", "lastDayDepletionVarCard", "lastDayDepletionPyCard", "Last_Day_Depletion", "Last_Day_Target", "Last_Day_Depletion_PY");
+      setCard("wtdDepletionCard", "wtdDepletionAchCard", "wtdDepletionVarCard", "wtdDepletionPyCard", "WTD_Depletion", "WTD_Target", "WTD_Depletion_PY");
+      setCard("mtdDepletionCard", "mtdDepletionAchCard", "mtdDepletionVarCard", "mtdDepletionPyCard", "MTD_Depletion", "MTD_Target", "MTD_Depletion_PY");
+      setCard("ytdDepletionCard", "ytdDepletionAchCard", "ytdDepletionVarCard", "ytdDepletionPyCard", "YTD_Depletion", "YTD_Target", "YTD_Depletion_PY");
 
       const beginningStock = sum(data, "Beginning_Stock");
       const mtdShipment = sum(data, "MTD_Sales");
