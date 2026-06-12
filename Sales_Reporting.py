@@ -2107,7 +2107,7 @@ depletion_agent_col = find_col(
 
 depletion_brand_col = find_col(
     depletion_work,
-    ["Brand H+HK", "Product", "Item Description", "Brand", "Material Description"],
+    ["Product"],
     "fact_ytd_depletion"
 )
 
@@ -2139,6 +2139,12 @@ if depletion_crates_col is None and depletion_hl_col is None:
 depletion_work[depletion_date_col] = pd.to_datetime(depletion_work[depletion_date_col], errors="coerce", dayfirst=True)
 depletion_work = depletion_work[depletion_work[depletion_date_col].notna()].copy()
 
+print("=" * 120)
+print("DEPLETION BRAND SOURCE COLUMN CHECK")
+print("=" * 120)
+print("Depletion brand column used:", depletion_brand_col)
+print("Rule: Depletion brand must come from Product column only. Brand H+HK is not used.")
+
 depletion_work["Depletion Date"] = depletion_work[depletion_date_col]
 depletion_work["Original Brand"] = depletion_work[depletion_brand_col]
 depletion_work["Brand KPI Key"] = depletion_work["Original Brand"].apply(brand_kpi_key)
@@ -2155,6 +2161,19 @@ if depletion_hl_col is not None:
 else:
     depletion_work["Depletion_Crates"] = to_number(depletion_work[depletion_crates_col])
     depletion_work["Depletion_HL"] = depletion_work["Depletion_Crates"] * HL_PER_CRATE
+
+depletion_product_brand_check = (
+    depletion_work
+    .groupby(["Original Brand", "Brand KPI Key"], dropna=False)
+    .agg(Depletion_Crates=("Depletion_Crates", "sum"))
+    .reset_index()
+    .sort_values("Depletion_Crates", ascending=False)
+)
+
+print("=" * 120)
+print("DEPLETION PRODUCT TO BRAND KPI CHECK")
+print("=" * 120)
+display(depletion_product_brand_check)
 
 mtd_depletion_ab = (
     depletion_work[depletion_work["Depletion Date"].between(CURRENT_MONTH_START, LAST_SHIPMENT_DATE)]
