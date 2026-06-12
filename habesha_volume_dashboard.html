@@ -1671,73 +1671,93 @@
       }
     }
 
+
   
-    /* Mobile interaction helper */
-    .mobile-action-panel {
-      display: none;
-      margin-top: 12px;
-      padding: 12px;
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      background: #fffdf7;
-      box-shadow: 0 8px 20px rgba(90, 70, 20, 0.06);
-      gap: 8px;
-    }
-
-    .mobile-action-panel strong {
-      font-size: 14px;
-      color: var(--ink);
-    }
-
-    .mobile-action-panel span {
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.35;
-    }
-
-    .mobile-jump-row {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 6px;
-      width: 100%;
-    }
-
-    .mobile-jump-row button {
-      border: 1px solid #b88a20;
-      background: #fff4cf;
-      color: #5b3b00;
-      border-radius: 10px;
-      padding: 9px 6px;
-      font-size: 11px;
-      font-weight: 800;
-    }
-
+    /* Mobile scroll and bottom upload fix */
     @media (max-width: 768px) {
-      .mobile-action-panel {
+      .bottom-upload-panel {
         display: flex !important;
-        flex-direction: column;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
       }
 
-      #csvFileTop {
+      .bottom-upload-panel input[type="file"],
+      #csvFile {
         width: 100% !important;
         max-width: none !important;
       }
 
-      .bottom-upload-panel {
-        display: none !important;
+      .panel,
+      .mini-table-panel,
+      .closed-month-panel,
+      .table-panel,
+      .card,
+      .combo-card,
+      .stock-card {
+        overflow: visible !important;
       }
 
-      select,
-      button,
-      input[type="file"] {
-        min-height: 40px !important;
+      .mini-table-wrap,
+      .closed-month-wrap,
+      .table-wrap {
+        width: 100% !important;
+        overflow-x: auto !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        touch-action: pan-x pan-y !important;
+      }
+
+      .panel canvas {
+        width: 100% !important;
+        min-width: 620px !important;
+      }
+
+      .panel:has(canvas) {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+      }
+
+      #regionalTable,
+      #brandRegionPerformanceTable,
+      #closedRegionTable,
+      #closedBrandTable,
+      #dataTable {
+        width: max-content !important;
+      }
+
+      #regionalTable,
+      #brandRegionPerformanceTable {
+        min-width: 1050px !important;
+      }
+
+      #closedRegionTable,
+      #closedBrandTable {
+        min-width: 1150px !important;
+      }
+
+      #dataTable {
+        min-width: 1350px !important;
       }
 
       .load-status-bottom {
-        display: block;
-        position: sticky;
-        top: 0;
-        z-index: 50;
+        position: static !important;
+      }
+    }
+
+    @media (max-width: 420px) {
+      #regionalTable,
+      #brandRegionPerformanceTable {
+        min-width: 1000px !important;
+      }
+
+      #closedRegionTable,
+      #closedBrandTable {
+        min-width: 1100px !important;
+      }
+
+      #dataTable {
+        min-width: 1280px !important;
       }
     }
 
@@ -1755,21 +1775,7 @@
         </div>
       </div>
     </header>
-
-    <section class="mobile-action-panel">
-      <strong>Mobile use</strong>
-      <span>Tap upload if the report is blank, then use filters below.</span>
-      <input id="csvFileTop" type="file" accept=".csv" />
-      <div class="mobile-jump-row">
-        <button onclick="scrollToSection('regionalTable')">Regional</button>
-        <button onclick="scrollToSection('brandRegionPerformanceTable')">Brand</button>
-        <button onclick="scrollToSection('closedRegionTable')">Closed</button>
-        <button onclick="scrollToSection('dataTable')">Details</button>
-      </div>
-    </section>
-
-
-    <div class="pattern-strip"></div>
+<div class="pattern-strip"></div>
 
     <section class="filters">
       <div class="filter-group">
@@ -3291,12 +3297,6 @@ function renderTable(data) {
       });
     }
 
-    function scrollToSection(id) {
-      const el = $(id);
-      if (!el) return;
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-
     function handleCsvFileChange(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -3322,7 +3322,7 @@ function renderTable(data) {
       });
     }
 
-    ["csvFile", "csvFileTop"].forEach(id => {
+    ["csvFile"].forEach(id => {
       const el = $(id);
       if (el) el.addEventListener("change", handleCsvFileChange);
     });
