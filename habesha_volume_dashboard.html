@@ -1868,6 +1868,119 @@
       }
     }
 
+  
+    /* Added: Brand Performance Vs PY columns and Closed Month by Agent */
+    @media (max-width: 768px) {
+      #brandRegionPerformanceTable {
+        width: 1380px !important;
+        min-width: 1380px !important;
+      }
+
+      #closedAgentTable {
+        display: table !important;
+        table-layout: auto !important;
+        width: 1150px !important;
+        min-width: 1150px !important;
+        max-width: none !important;
+      }
+
+      #closedAgentTable th,
+      #closedAgentTable td {
+        white-space: nowrap !important;
+        min-width: 74px !important;
+        max-width: none !important;
+      }
+
+      #closedAgentTable .closed-sticky-main,
+      #closedAgentTable th:first-child,
+      #closedAgentTable td:first-child {
+        position: sticky !important;
+        left: 0 !important;
+        z-index: 20 !important;
+        background: #fffdf7 !important;
+        box-shadow: 7px 0 9px rgba(80, 55, 5, 0.10) !important;
+        min-width: 120px !important;
+        max-width: 150px !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+      }
+
+      #closedAgentTable thead .closed-sticky-main,
+      #closedAgentTable th:first-child {
+        background: #fff4cf !important;
+        z-index: 30 !important;
+      }
+    }
+
+  
+    /* Closed Month visuals remain stacked: Region, Brand, then Agent */
+    .closed-month-grid {
+      grid-template-columns: 1fr !important;
+    }
+
+  
+    /* Closed Month by Agent: keep Division and Agent fixed while scrolling */
+    #closedAgentTable {
+      min-width: 1280px !important;
+      table-layout: auto !important;
+    }
+
+    #closedAgentTable .closed-sticky-division,
+    #closedAgentTable .closed-sticky-agent {
+      position: sticky !important;
+      z-index: 18 !important;
+      background: #fffdf7 !important;
+      box-shadow: 7px 0 9px rgba(80, 55, 5, 0.10) !important;
+      font-weight: 800 !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      white-space: nowrap !important;
+    }
+
+    #closedAgentTable .closed-sticky-division {
+      left: 0 !important;
+      min-width: 120px !important;
+      max-width: 140px !important;
+      width: 120px !important;
+    }
+
+    #closedAgentTable .closed-sticky-agent {
+      left: 120px !important;
+      min-width: 170px !important;
+      max-width: 210px !important;
+      width: 170px !important;
+    }
+
+    #closedAgentTable thead .closed-sticky-division,
+    #closedAgentTable thead .closed-sticky-agent {
+      background: #fff4cf !important;
+      z-index: 35 !important;
+    }
+
+    #closedAgentTable .closed-sticky-agent {
+      border-right: 4px solid #d6b24a !important;
+    }
+
+    @media (max-width: 768px) {
+      #closedAgentTable {
+        width: 1320px !important;
+        min-width: 1320px !important;
+      }
+
+      #closedAgentTable .closed-sticky-division {
+        min-width: 105px !important;
+        max-width: 120px !important;
+        width: 105px !important;
+      }
+
+      #closedAgentTable .closed-sticky-agent {
+        left: 105px !important;
+        min-width: 145px !important;
+        max-width: 170px !important;
+        width: 145px !important;
+      }
+    }
+
   </style>
 </head>
 
@@ -2078,6 +2191,21 @@
         </div>
         <div class="closed-month-wrap">
           <table id="closedBrandTable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="closed-month-panel">
+        <div class="panel-header">
+          <h2>Closed Months by Agent</h2>
+          <div class="panel-header-actions">
+            <button class="export-btn" onclick="exportClosedAgentCsv()">Export CSV</button>
+          </div>
+        </div>
+        <div class="closed-month-wrap">
+          <table id="closedAgentTable">
             <thead></thead>
             <tbody></tbody>
           </table>
@@ -2620,6 +2748,109 @@
       }).join("");
     }
 
+
+    function renderClosedMonthAgentMatrix(tableId, rows) {
+      const table = $(tableId);
+      if (!table) return;
+
+      const months = [...new Map(
+        rows
+          .filter(r => r["Month Label"])
+          .sort((a, b) => toNum(a["Month Number"]) - toNum(b["Month Number"]))
+          .map(r => [r["Month Label"], { label: r["Month Label"], number: r["Month Number"] }])
+      ).values()];
+
+      const metrics = closedMonthMetricCols();
+
+      if (!rows.length || !months.length) {
+        table.querySelector("thead").innerHTML = `<tr><th>Division</th><th>Agent</th></tr>`;
+        table.querySelector("tbody").innerHTML =
+          `<tr><td colspan="2">No closed month agent data found. Run Python to regenerate final_kpi_report.csv.</td></tr>`;
+        return;
+      }
+
+      const groups = [...new Map(
+        rows
+          .map(r => {
+            const division = r.Division || "Unknown";
+            const agent = r.Agent || "Unknown";
+            return [`${division}||${agent}`, { Division: division, Agent: agent }];
+          })
+      ).values()].sort((a, b) => {
+        const d = String(a.Division).localeCompare(String(b.Division));
+        if (d !== 0) return d;
+        return String(a.Agent).localeCompare(String(b.Agent));
+      });
+
+      const matrix = new Map();
+      rows.forEach(r => {
+        const division = r.Division || "Unknown";
+        const agent = r.Agent || "Unknown";
+        const month = r["Month Label"];
+        const key = `${division}||${agent}||${month}`;
+
+        if (!matrix.has(key)) {
+          matrix.set(key, {
+            Full_Month_Target: 0,
+            Actual: 0,
+            PY: 0
+          });
+        }
+
+        const item = matrix.get(key);
+        item.Full_Month_Target += toNum(r.Full_Month_Target);
+        item.Actual += toNum(r.Actual);
+        item.PY += toNum(r.PY);
+      });
+
+      matrix.forEach(item => {
+        item["Achievement %"] = item.Full_Month_Target === 0 ? 0 : (item.Actual / item.Full_Month_Target) - 1;
+        item["Actual vs PY %"] = item.PY === 0 ? 0 : (item.Actual / item.PY) - 1;
+      });
+
+      table.querySelector("thead").innerHTML = `
+        <tr>
+          <th rowspan="2" class="closed-sticky-division">Division</th>
+          <th rowspan="2" class="closed-sticky-agent">Agent</th>
+          ${months.map(m => `<th colspan="${metrics.length}" class="closed-month-head">${escapeHtml(m.label)}</th>`).join("")}
+        </tr>
+        <tr>
+          ${months.map(m => metrics.map(metric =>
+            `<th class="${metric.key === "Full_Month_Target" ? "closed-section-start" : ""}">${metric.label}</th>`
+          ).join("")).join("")}
+        </tr>
+      `;
+
+      table.querySelector("tbody").innerHTML = groups.map(g => {
+        const cells = [
+          `<td class="closed-sticky-division">${escapeHtml(g.Division)}</td>`,
+          `<td class="closed-sticky-agent">${escapeHtml(g.Agent)}</td>`
+        ];
+
+        months.forEach(m => {
+          const item = matrix.get(`${g.Division}||${g.Agent}||${m.label}`) || {
+            Full_Month_Target: 0,
+            Actual: 0,
+            PY: 0,
+            "Achievement %": 0,
+            "Actual vs PY %": 0
+          };
+
+          metrics.forEach(metric => {
+            const sectionCls = metric.key === "Full_Month_Target" ? "closed-section-start" : "";
+            if (metric.type === "pct") {
+              const val = item[metric.key];
+              cells.push(`<td class="${sectionCls} ach-cell ${achClass(val)}">${formatPct(val)}</td>`);
+            } else {
+              cells.push(`<td class="${sectionCls}">${formatNumber(item[metric.key])}</td>`);
+            }
+          });
+        });
+
+        return `<tr>${cells.join("")}</tr>`;
+      }).join("");
+    }
+
     function closedMonthMatrixRows(rows, groupCol) {
       const months = [...new Map(
         rows
@@ -2701,9 +2932,11 @@
 
       const regionRows = aggregateClosedMonth(view, ["Division"]);
       const brandRows = aggregateClosedMonth(view, ["Brand"]);
+      const agentRows = aggregateClosedMonth(view, ["Division", "Agent"]);
 
       renderClosedMonthMatrix("closedRegionTable", regionRows, "Division");
       renderClosedMonthMatrix("closedBrandTable", brandRows, "Brand");
+      renderClosedMonthAgentMatrix("closedAgentTable", agentRows);
     }
 
     function loadClosedMonthCsv() {
@@ -2754,6 +2987,36 @@
         .trim();
     }
 
+    function makeUniqueColumns(columns) {
+      const seen = {};
+      return columns.map((col, i) => {
+        const base = cleanCellText(col) || `Column ${i + 1}`;
+        seen[base] = (seen[base] || 0) + 1;
+        return seen[base] === 1 ? base : `${base} ${seen[base]}`;
+      });
+    }
+
+    function downloadCsvRows(filename, rows) {
+      if (!rows || !rows.length) {
+        alert("No data available to export.");
+        return;
+      }
+
+      const csv = "\uFEFF" + rows
+        .map(row => row.map(csvEscape).join(","))
+        .join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
     function exportTableAsVisualCsv(tableId, filename) {
       const table = $(tableId);
       if (!table) {
@@ -2768,11 +3031,10 @@
       }
 
       let columns = [];
-
       const headerRows = [...table.querySelectorAll("thead tr")];
 
       if (headerRows.length >= 2) {
-        // Handles closed-month matrix tables where Month is on row 1 and Target/Actual/PY/Ach% on row 2.
+        // Closed-month matrix: Month is on header row 1, Target/Actual/PY/Ach% on header row 2.
         const firstRow = [...headerRows[0].children];
         const secondRow = [...headerRows[1].children];
 
@@ -2794,34 +3056,147 @@
         columns = [...table.querySelectorAll("thead th")].map(th => cleanCellText(th.textContent));
       }
 
-      const rows = bodyRows.map(tr => {
+      // Very important: keep duplicate visible headers as separate columns.
+      // Example Brand Performance has four "Ach%" columns. Object-based export overwrote them.
+      columns = makeUniqueColumns(columns);
+
+      const output = [columns];
+
+      bodyRows.forEach(tr => {
         const cells = [...tr.children].map(td => cleanCellText(td.textContent));
-        const row = {};
-        columns.forEach((col, i) => row[col || `Column ${i + 1}`] = cells[i] ?? "");
-        return row;
+        const row = columns.map((_, i) => cells[i] ?? "");
+        output.push(row);
       });
 
-      downloadCsv(filename, rows, columns);
+      downloadCsvRows(filename, output);
+    }
+
+    function exportBrandPerformanceCsv() {
+      const table = $("brandRegionPerformanceTable");
+      if (!table) {
+        alert("Table not found for export.");
+        return;
+      }
+
+      const columns = [
+        "Brand",
+        "MTD Target",
+        "MTD Shipment",
+        "MTD Achievement %",
+        "MTD Shipment Vs PY %",
+        "YTD Target",
+        "YTD Shipment",
+        "YTD Achievement %",
+        "YTD Shipment Vs PY %",
+        "MTD Depletion Target",
+        "MTD Depletion",
+        "MTD Depletion Achievement %",
+        "MTD Depletion Vs PY %",
+        "YTD Depletion Target",
+        "YTD Depletion",
+        "YTD Depletion Achievement %",
+        "YTD Depletion Vs PY %"
+      ];
+
+      const bodyRows = [...table.querySelectorAll("tbody tr")];
+      if (!bodyRows.length) {
+        alert("No data available to export.");
+        return;
+      }
+
+      const output = [columns];
+      bodyRows.forEach(tr => {
+        const cells = [...tr.children].map(td => cleanCellText(td.textContent));
+        output.push(columns.map((_, i) => cells[i] ?? ""));
+      });
+
+      downloadCsvRows("brand_performance_visual.csv", output);
     }
 
     function exportRegionalPerformanceCsv() {
       exportTableAsVisualCsv("regionalTable", "regional_performance_visual.csv");
     }
 
-    function exportBrandPerformanceCsv() {
-      exportTableAsVisualCsv("brandRegionPerformanceTable", "brand_performance_visual.csv");
-    }
-
-    function exportDetailedReportCsv() {
+        function exportDetailedReportCsv() {
       exportTableAsVisualCsv("dataTable", "detailed_report_visual.csv");
     }
 
+
+    function exportClosedMatrixAsVisualCsv(tableId, filename) {
+      const table = $(tableId);
+      if (!table) {
+        alert("Table not found for export.");
+        return;
+      }
+
+      const headerRows = [...table.querySelectorAll("thead tr")];
+      const bodyRows = [...table.querySelectorAll("tbody tr")];
+
+      if (headerRows.length < 2 || !bodyRows.length) {
+        exportTableAsVisualCsv(tableId, filename);
+        return;
+      }
+
+      const firstHeaderCells = [...headerRows[0].children];
+      const secondHeaderCells = [...headerRows[1].children];
+
+      // Keep the same matrix structure as the visual.
+      // Supports 1 fixed column for Region/Brand and 2 fixed columns for Division + Agent.
+      const leadingHeaders = [];
+      let firstMonthIndex = 0;
+
+      firstHeaderCells.forEach((th, i) => {
+        const rowSpan = parseInt(th.getAttribute("rowspan") || "1", 10);
+        const colSpan = parseInt(th.getAttribute("colspan") || "1", 10);
+
+        if (rowSpan >= 2 && colSpan === 1) {
+          leadingHeaders.push(cleanCellText(th.textContent));
+          firstMonthIndex = i + 1;
+        }
+      });
+
+      if (!leadingHeaders.length) {
+        leadingHeaders.push(cleanCellText(firstHeaderCells[0]?.textContent || ""));
+        firstMonthIndex = 1;
+      }
+
+      const monthHeaders = firstHeaderCells.slice(firstMonthIndex).map(th => ({
+        name: cleanCellText(th.textContent),
+        span: parseInt(th.getAttribute("colspan") || "1", 10)
+      }));
+
+      const headerRow1 = [...leadingHeaders];
+      const headerRow2 = leadingHeaders.map(() => "");
+
+      let metricIndex = 0;
+      monthHeaders.forEach(month => {
+        for (let i = 0; i < month.span; i++) {
+          headerRow1.push(i === 0 ? month.name : "");
+          headerRow2.push(cleanCellText(secondHeaderCells[metricIndex]?.textContent || ""));
+          metricIndex++;
+        }
+      });
+
+      const output = [headerRow1, headerRow2];
+
+      bodyRows.forEach(tr => {
+        const cells = [...tr.children].map(td => cleanCellText(td.textContent));
+        output.push(cells);
+      });
+
+      downloadCsvRows(filename, output);
+    }
+
     function exportClosedRegionCsv() {
-      exportTableAsVisualCsv("closedRegionTable", "closed_month_by_region_visual.csv");
+      exportClosedMatrixAsVisualCsv("closedRegionTable", "closed_month_by_region_visual.csv");
     }
 
     function exportClosedBrandCsv() {
-      exportTableAsVisualCsv("closedBrandTable", "closed_month_by_brand_visual.csv");
+      exportClosedMatrixAsVisualCsv("closedBrandTable", "closed_month_by_brand_visual.csv");
+    }
+
+    function exportClosedAgentCsv() {
+      exportClosedMatrixAsVisualCsv("closedAgentTable", "closed_month_by_agent_visual.csv");
     }
 
     function applyFilters() {
@@ -2900,6 +3275,10 @@
             MTD_Depletion: 0,
             YTD_Sales: 0,
             YTD_Target: 0,
+            MTD_PY: 0,
+            YTD_PY: 0,
+            MTD_Depletion_PY: 0,
+            YTD_Depletion_PY: 0,
             YTD_Depletion: 0,
             Stock_per_Agent: 0,
             Avg_Daily_Depletion: 0
@@ -2912,6 +3291,10 @@
         item.MTD_Depletion += toNum(r["MTD_Depletion"]);
         item.YTD_Sales += toNum(r["YTD_Sales"]);
         item.YTD_Target += toNum(r["YTD_Target"]);
+        item.MTD_PY += toNum(r["MTD_PY"]);
+        item.YTD_PY += toNum(r["YTD_PY"]);
+        item.MTD_Depletion_PY += toNum(r["MTD_Depletion_PY"]);
+        item.YTD_Depletion_PY += toNum(r["YTD_Depletion_PY"]);
         item.YTD_Depletion += toNum(r["YTD_Depletion"]);
         item.Stock_per_Agent += toNum(r["Stock_per_Agent"]);
         item.Avg_Daily_Depletion += toNum(r["Avg_Daily_Depletion"]);
@@ -2919,10 +3302,14 @@
 
       let rows = [...map.values()].map(r => {
         r["MTD Ach"] = r.MTD_Target === 0 ? 0 : (r.MTD_Sales / r.MTD_Target) - 1;
+        r["MTD Sales vs PY"] = r.MTD_PY === 0 ? 0 : (r.MTD_Sales / r.MTD_PY) - 1;
         r["MTD Depletion Ach"] = r.MTD_Target === 0 ? 0 : (r.MTD_Depletion / r.MTD_Target) - 1;
+        r["MTD Depletion vs PY"] = r.MTD_Depletion_PY === 0 ? 0 : (r.MTD_Depletion / r.MTD_Depletion_PY) - 1;
         r["YTD Ach"] = r.YTD_Target === 0 ? 0 : (r.YTD_Sales / r.YTD_Target) - 1;
+        r["YTD Sales vs PY"] = r.YTD_PY === 0 ? 0 : (r.YTD_Sales / r.YTD_PY) - 1;
         r["YTD Net Ach"] = r.YTD_Sales - r.YTD_Target;
         r["YTD Depletion Ach"] = r.YTD_Target === 0 ? 0 : (r.YTD_Depletion / r.YTD_Target) - 1;
+        r["YTD Depletion vs PY"] = r.YTD_Depletion_PY === 0 ? 0 : (r.YTD_Depletion / r.YTD_Depletion_PY) - 1;
         r["Days of Stock"] = r.Avg_Daily_Depletion === 0 ? 0 : r.Stock_per_Agent / r.Avg_Daily_Depletion;
         return r;
       });
@@ -2956,6 +3343,10 @@
         "YTD Target": "YTD<br>Target",
         "YTD Sipm": "YTD<br>Ship.",
         "YTD Net Ach": "YTD Net<br>Ach",
+        "MTD Sales vs PY": "MTD<br>Vs PY",
+        "YTD Sales vs PY": "YTD<br>Vs PY",
+        "MTD Depletion vs PY": "MTD Depl.<br>Vs PY",
+        "YTD Depletion vs PY": "YTD Depl.<br>Vs PY",
         "MTD Dip Target": "MTD Depl.<br>Target",
         "MTD Dip": "MTD<br>Depl.",
         "YTD Dip Target": "YTD Depl.<br>Target",
@@ -2994,7 +3385,7 @@ function renderMiniPerformanceTable(tableId, rows, firstColName, mode = "regiona
       if (!table) return;
 
       const cols = mode === "brand"
-        ? ["Brand", "MTD Target", "MTD Sipm", "Ach%", "YTD Target", "YTD Sipm", "Ach%", "MTD Dip Target", "MTD Dip", "Ach%", "YTD Dip Target", "YTD Dip", "Ach%"]
+        ? ["Brand", "MTD Target", "MTD Sipm", "Ach%", "MTD Sales vs PY", "YTD Target", "YTD Sipm", "Ach%", "YTD Sales vs PY", "MTD Dip Target", "MTD Dip", "Ach%", "MTD Depletion vs PY", "YTD Dip Target", "YTD Dip", "Ach%", "YTD Depletion vs PY"]
         : [firstColName, "MTD Target", "MTD Sipm", "Ach%", "YTD Target", "YTD Sipm", "Ach%", "YTD Net Ach", "MTD Dip Target", "MTD Dip", "Ach%", "YTD Dip Target", "YTD Dip", "Ach%", "Days Stock"];
 
       table.querySelector("thead").innerHTML = `<tr>${cols.map((c, i) => `<th class="${miniTableCellClass(c, i)}">${shortHeaderName(c)}</th>`).join("")}</tr>`;
@@ -3007,15 +3398,19 @@ function renderMiniPerformanceTable(tableId, rows, firstColName, mode = "regiona
               <td class="kpi-section-start">${formatNumber(r.MTD_Target)}</td>
               <td>${formatNumber(r.MTD_Sales)}</td>
               <td class="ach-cell ${achClass(r["MTD Ach"])}">${formatPct(r["MTD Ach"])}</td>
+              <td class="ach-cell ${achClass(r["MTD Sales vs PY"])}">${formatPct(r["MTD Sales vs PY"])}</td>
               <td class="kpi-section-start">${formatNumber(r.YTD_Target)}</td>
               <td>${formatNumber(r.YTD_Sales)}</td>
               <td class="ach-cell ${achClass(r["YTD Ach"])}">${formatPct(r["YTD Ach"])}</td>
+              <td class="ach-cell ${achClass(r["YTD Sales vs PY"])}">${formatPct(r["YTD Sales vs PY"])}</td>
               <td class="kpi-section-start">${formatNumber(r.MTD_Target)}</td>
               <td>${formatNumber(r.MTD_Depletion)}</td>
               <td class="ach-cell ${achClass(r["MTD Depletion Ach"])}">${formatPct(r["MTD Depletion Ach"])}</td>
+              <td class="ach-cell ${achClass(r["MTD Depletion vs PY"])}">${formatPct(r["MTD Depletion vs PY"])}</td>
               <td class="kpi-section-start">${formatNumber(r.YTD_Target)}</td>
               <td>${formatNumber(r.YTD_Depletion)}</td>
               <td class="ach-cell ${achClass(r["YTD Depletion Ach"])}">${formatPct(r["YTD Depletion Ach"])}</td>
+              <td class="ach-cell ${achClass(r["YTD Depletion vs PY"])}">${formatPct(r["YTD Depletion vs PY"])}</td>
             </tr>
           `;
         }
