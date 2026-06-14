@@ -1981,6 +1981,14 @@
       }
     }
 
+  
+    .section-note {
+      margin: -6px 0 14px;
+      color: #7a5a16;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
   </style>
 </head>
 
@@ -2926,6 +2934,46 @@
       renderClosedMonthMatrix(tableId, rows, groupCol);
     }
 
+
+    function currentMtdRowsForClosedMonth(groupCols) {
+      // Adds current MTD Shipment after the last closed month using the current filtered data.
+      // Shape matches aggregateClosedMonth output:
+      // Full_Month_Target = MTD Target
+      // Actual = MTD Shipment
+      // PY = MTD PY Shipment
+      const map = new Map();
+
+      filteredData.forEach(r => {
+        const keyParts = groupCols.map(c => r[c] || "Unknown");
+        const key = keyParts.join("||");
+
+        if (!map.has(key)) {
+          const item = {
+            "Month Number": 99,
+            "Month Label": "MTD"
+          };
+          groupCols.forEach((c, i) => item[c] = keyParts[i]);
+          item.Full_Month_Target = 0;
+          item.Actual = 0;
+          item.PY = 0;
+          map.set(key, item);
+        }
+
+        const item = map.get(key);
+        item.Full_Month_Target += toNum(r.MTD_Target);
+        item.Actual += toNum(r.MTD_Sales);
+        item.PY += toNum(r.MTD_PY);
+      });
+
+      return [...map.values()]
+        .map(r => {
+          r["Achievement %"] = r.Full_Month_Target === 0 ? 0 : (r.Actual / r.Full_Month_Target) - 1;
+          r["Actual vs PY %"] = r.PY === 0 ? 0 : (r.Actual / r.PY) - 1;
+          return r;
+        })
+        .filter(r => r.Full_Month_Target !== 0 || r.Actual !== 0 || r.PY !== 0);
+    }
+
     function updateClosedMonthTables() {
       const filters = currentSelections();
       const view = closedMonthData.filter(r => matchesClosedMonth(r, filters));
@@ -2934,9 +2982,13 @@
       const brandRows = aggregateClosedMonth(view, ["Brand"]);
       const agentRows = aggregateClosedMonth(view, ["Division", "Agent"]);
 
-      renderClosedMonthMatrix("closedRegionTable", regionRows, "Division");
-      renderClosedMonthMatrix("closedBrandTable", brandRows, "Brand");
-      renderClosedMonthAgentMatrix("closedAgentTable", agentRows);
+      const regionRowsWithMtd = regionRows.concat(currentMtdRowsForClosedMonth(["Division"]));
+      const brandRowsWithMtd = brandRows.concat(currentMtdRowsForClosedMonth(["Brand"]));
+      const agentRowsWithMtd = agentRows.concat(currentMtdRowsForClosedMonth(["Division", "Agent"]));
+
+      renderClosedMonthMatrix("closedRegionTable", regionRowsWithMtd, "Division");
+      renderClosedMonthMatrix("closedBrandTable", brandRowsWithMtd, "Brand");
+      renderClosedMonthAgentMatrix("closedAgentTable", agentRowsWithMtd);
     }
 
     function loadClosedMonthCsv() {
