@@ -5,95 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Habesha Volume Performance Dashboard</title>
 
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">
-
-    function scrollToDashboardSection(id) {
-      if (window.matchMedia && window.matchMedia("(max-width: 768px)").matches) {
-        openPageForSection(id);
-        return;
-      }
-
-      if (id === "top") id = "appTop";
-
-      const el = document.getElementById(id);
-      if (!el) {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-        return;
-      }
-
-      el.scrollIntoView({ behavior: "smooth", block: "start", inline: "nearest" });
-    }
-
-    function setActiveMobileTab(id) {
-      document.querySelectorAll(".mobile-tab").forEach(btn => {
-        btn.classList.toggle("active", btn.dataset.target === id);
-      });
-    }
-
-    function showMobilePage(pageId) {
-      const pages = document.querySelectorAll(".app-page");
-      const tabs = document.querySelectorAll(".mobile-tab");
-
-      pages.forEach(page => {
-        page.classList.toggle("active", page.id === pageId);
-      });
-
-      tabs.forEach(tab => {
-        tab.classList.toggle("active", tab.dataset.page === pageId);
-      });
-
-      window.scrollTo({ top: 0, behavior: "smooth" });
-
-      // Make charts redraw after their page becomes visible.
-      setTimeout(() => {
-        Object.values(charts || {}).forEach(chart => {
-          if (chart && typeof chart.resize === "function") {
-            chart.resize();
-          }
-        });
-        enableMobileTableTouchScroll();
-      }, 180);
-    }
-
-    function openPageForSection(id) {
-      const map = {
-        "appTop": "page-home",
-        "top": "page-home",
-        "sec-filters": "page-home",
-        "sec-shipment": "page-home",
-        "sec-depletion": "page-home",
-        "sec-stock": "page-home",
-        "sec-performance": "page-performance",
-        "sec-charts": "page-charts",
-        "sec-detail": "page-detail",
-        "sec-closed": "page-closed",
-        "csvFile": "page-upload"
-      };
-
-      const pageId = map[id] || "page-home";
-      showMobilePage(pageId);
-
-      setTimeout(() => {
-        const el = document.getElementById(id);
-        if (el && id !== "appTop" && id !== "top") {
-          el.scrollIntoView({ behavior: "smooth", block: "start", inline: "nearest" });
-        }
-      }, 220);
-    }
-
-  
-    document.addEventListener("DOMContentLoaded", () => {
-      if (window.matchMedia && window.matchMedia("(max-width: 768px)").matches) {
-        showMobilePage("page-home");
-      }
-    });
-
-  </script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 
   <style>
-:root {
+    :root {
       --gold: #c99a2e;
       --gold-dark: #9f7418;
       --gold-soft: #fff7df;
@@ -1754,6 +1671,170 @@
       }
     }
 
+  
+    /* Mobile fix: keep charts normal, make tables scrollable, upload at bottom */
+    @media (max-width: 768px) {
+      .bottom-upload-panel {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+      }
+
+      .bottom-upload-panel input[type="file"],
+      #csvFile {
+        width: 100% !important;
+        max-width: none !important;
+      }
+
+      .mini-table-wrap,
+      .closed-month-wrap,
+      .table-wrap {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: auto !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        touch-action: auto !important;
+      }
+
+      .mini-table-wrap table,
+      .closed-month-wrap table,
+      .table-wrap table {
+        width: max-content !important;
+        max-width: none !important;
+        table-layout: auto !important;
+      }
+
+      #regionalTable,
+      #brandRegionPerformanceTable {
+        min-width: 980px !important;
+      }
+
+      #closedRegionTable,
+      #closedBrandTable {
+        min-width: 1050px !important;
+      }
+
+      #dataTable {
+        min-width: 1250px !important;
+      }
+
+      .panel:has(canvas) {
+        overflow: hidden !important;
+      }
+
+      canvas {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        height: 260px !important;
+        max-height: 260px !important;
+      }
+
+      .grid .panel {
+        min-height: 310px !important;
+      }
+
+      .load-status-bottom {
+        position: static !important;
+      }
+    }
+
+    @media (max-width: 420px) {
+      #regionalTable,
+      #brandRegionPerformanceTable {
+        min-width: 940px !important;
+      }
+
+      #closedRegionTable,
+      #closedBrandTable {
+        min-width: 1000px !important;
+      }
+
+      #dataTable {
+        min-width: 1180px !important;
+      }
+
+      canvas {
+        height: 240px !important;
+        max-height: 240px !important;
+      }
+    }
+
+  
+    /* FINAL MOBILE FIX: Regional and Brand Performance horizontal scroll */
+    @media (max-width: 768px) {
+      .performance-grid {
+        display: block !important;
+      }
+
+      .performance-grid .mini-table-panel {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
+        margin-bottom: 12px !important;
+      }
+
+      .performance-grid .mini-table-wrap {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: scroll !important;
+        overflow-y: visible !important;
+        -webkit-overflow-scrolling: touch !important;
+        touch-action: pan-x pan-y !important;
+        overscroll-behavior-x: contain !important;
+      }
+
+      #regionalTable,
+      #brandRegionPerformanceTable {
+        display: table !important;
+        table-layout: auto !important;
+        width: 1180px !important;
+        min-width: 1180px !important;
+        max-width: none !important;
+      }
+
+      #regionalTable th,
+      #regionalTable td,
+      #brandRegionPerformanceTable th,
+      #brandRegionPerformanceTable td {
+        white-space: nowrap !important;
+        min-width: 74px !important;
+        max-width: none !important;
+      }
+
+      #regionalTable th:first-child,
+      #regionalTable td:first-child,
+      #brandRegionPerformanceTable th:first-child,
+      #brandRegionPerformanceTable td:first-child {
+        position: sticky !important;
+        left: 0 !important;
+        z-index: 20 !important;
+        min-width: 105px !important;
+        max-width: 125px !important;
+        background: #fffdf7 !important;
+        box-shadow: 7px 0 9px rgba(80, 55, 5, 0.10) !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+      }
+
+      #regionalTable th:first-child,
+      #brandRegionPerformanceTable th:first-child {
+        background: #fff4cf !important;
+        z-index: 30 !important;
+      }
+    }
+
+    @media (max-width: 420px) {
+      #regionalTable,
+      #brandRegionPerformanceTable {
+        width: 1120px !important;
+        min-width: 1120px !important;
+      }
+    }
 
   
     /* Card variance vs target number */
@@ -1908,550 +1989,10 @@
       font-weight: 700;
     }
 
-  
-    /* Optimized responsive phone layout */
-    @media (max-width: 768px) {
-      html, body {
-        width: 100%;
-        max-width: 100%;
-        overflow-x: hidden;
-      }
-
-      body {
-        padding: 0 !important;
-      }
-
-      .page {
-        width: 100% !important;
-        max-width: 100% !important;
-        padding: 10px !important;
-        border-radius: 0 !important;
-        overflow-x: hidden !important;
-      }
-
-      .topbar {
-        display: block !important;
-        padding: 14px 12px !important;
-        border-radius: 14px !important;
-      }
-
-      .brand-block {
-        display: flex !important;
-        align-items: center !important;
-        gap: 10px !important;
-      }
-
-      .logo-img {
-        width: 48px !important;
-        height: 48px !important;
-        min-width: 48px !important;
-      }
-
-      .title h1 {
-        font-size: 18px !important;
-        line-height: 1.15 !important;
-      }
-
-      .title p {
-        font-size: 11px !important;
-        line-height: 1.3 !important;
-      }
-
-      .filters {
-        display: grid !important;
-        grid-template-columns: 1fr 1fr !important;
-        gap: 8px !important;
-        padding: 10px !important;
-        border-radius: 14px !important;
-      }
-
-      .filter-group label {
-        font-size: 10px !important;
-      }
-
-      .filter-group select,
-      .filter-group input {
-        width: 100% !important;
-        min-width: 0 !important;
-        font-size: 12px !important;
-        padding: 8px !important;
-      }
-
-      .section-title {
-        font-size: 16px !important;
-        margin: 16px 0 8px !important;
-      }
-
-      .section-note {
-        font-size: 11px !important;
-        margin: -2px 0 10px !important;
-      }
-
-      .cards,
-      .combined-cards,
-      .stock-cards {
-        display: grid !important;
-        grid-template-columns: 1fr 1fr !important;
-        gap: 8px !important;
-      }
-
-      .card {
-        padding: 10px !important;
-        border-radius: 14px !important;
-        min-height: auto !important;
-      }
-
-      .card .label {
-        font-size: 10px !important;
-      }
-
-      .card .value {
-        font-size: 20px !important;
-        line-height: 1.1 !important;
-        margin: 4px 0 6px !important;
-      }
-
-      .combo-line,
-      .stock-input {
-        font-size: 10px !important;
-        gap: 4px !important;
-      }
-
-      .stock-input-grid {
-        grid-template-columns: 1fr !important;
-        gap: 5px !important;
-      }
-
-      .grid,
-      .chart-grid,
-      .performance-grid,
-      .closed-month-grid {
-        display: block !important;
-      }
-
-      .panel,
-      .mini-table-panel,
-      .closed-month-panel {
-        width: 100% !important;
-        max-width: 100% !important;
-        min-width: 0 !important;
-        padding: 10px !important;
-        margin-bottom: 12px !important;
-        border-radius: 14px !important;
-        overflow: hidden !important;
-      }
-
-      .panel-header {
-        display: flex !important;
-        align-items: flex-start !important;
-        justify-content: space-between !important;
-        gap: 8px !important;
-        flex-wrap: wrap !important;
-      }
-
-      .panel-header h2 {
-        font-size: 14px !important;
-        line-height: 1.2 !important;
-      }
-
-      .panel-header-actions {
-        justify-content: flex-start !important;
-        gap: 6px !important;
-      }
-
-      .export-btn {
-        font-size: 11px !important;
-        padding: 7px 9px !important;
-        border-radius: 9px !important;
-      }
-
-      canvas {
-        width: 100% !important;
-        max-width: 100% !important;
-        min-width: 0 !important;
-        height: 250px !important;
-        max-height: 250px !important;
-      }
-
-      .mini-table-wrap,
-      .closed-month-wrap,
-      .table-wrap {
-        width: 100% !important;
-        max-width: 100% !important;
-        display: block !important;
-        overflow-x: auto !important;
-        overflow-y: auto !important;
-        -webkit-overflow-scrolling: touch !important;
-        overscroll-behavior-x: contain !important;
-        touch-action: pan-x pan-y !important;
-        border-radius: 12px !important;
-      }
-
-      .mini-table-wrap table,
-      .closed-month-wrap table,
-      .table-wrap table {
-        table-layout: auto !important;
-        width: max-content !important;
-        max-width: none !important;
-        border-collapse: separate !important;
-        border-spacing: 0 !important;
-      }
-
-      th, td {
-        font-size: 10.5px !important;
-        padding: 7px 7px !important;
-        white-space: nowrap !important;
-      }
-
-      #regionalTable {
-        min-width: 1120px !important;
-      }
-
-      #brandRegionPerformanceTable {
-        min-width: 1380px !important;
-      }
-
-      #dataTable {
-        min-width: 1280px !important;
-      }
-
-      #closedRegionTable,
-      #closedBrandTable {
-        min-width: 1180px !important;
-      }
-
-      #closedAgentTable {
-        min-width: 1420px !important;
-      }
-
-      #regionalTable th:first-child,
-      #regionalTable td:first-child,
-      #brandRegionPerformanceTable th:first-child,
-      #brandRegionPerformanceTable td:first-child,
-      #closedRegionTable th:first-child,
-      #closedRegionTable td:first-child,
-      #closedBrandTable th:first-child,
-      #closedBrandTable td:first-child,
-      #dataTable th:first-child,
-      #dataTable td:first-child {
-        position: sticky !important;
-        left: 0 !important;
-        z-index: 20 !important;
-        min-width: 105px !important;
-        max-width: 130px !important;
-        background: #fffdf7 !important;
-        box-shadow: 6px 0 8px rgba(80, 55, 5, 0.12) !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-      }
-
-      #regionalTable th:first-child,
-      #brandRegionPerformanceTable th:first-child,
-      #closedRegionTable th:first-child,
-      #closedBrandTable th:first-child,
-      #dataTable th:first-child {
-        background: #fff4cf !important;
-        z-index: 30 !important;
-      }
-
-      #closedAgentTable .closed-sticky-division {
-        position: sticky !important;
-        left: 0 !important;
-        z-index: 30 !important;
-        min-width: 95px !important;
-        max-width: 105px !important;
-        width: 95px !important;
-        background: #fffdf7 !important;
-        box-shadow: 6px 0 8px rgba(80, 55, 5, 0.12) !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-      }
-
-      #closedAgentTable .closed-sticky-agent {
-        position: sticky !important;
-        left: 95px !important;
-        z-index: 30 !important;
-        min-width: 135px !important;
-        max-width: 155px !important;
-        width: 135px !important;
-        background: #fffdf7 !important;
-        box-shadow: 6px 0 8px rgba(80, 55, 5, 0.12) !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-        border-right: 4px solid #d6b24a !important;
-      }
-
-      #closedAgentTable thead .closed-sticky-division,
-      #closedAgentTable thead .closed-sticky-agent {
-        background: #fff4cf !important;
-        z-index: 40 !important;
-      }
-
-      .bottom-upload-panel {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: stretch !important;
-        gap: 10px !important;
-        padding: 12px !important;
-        border-radius: 14px !important;
-      }
-
-      #csvFile {
-        width: 100% !important;
-        max-width: 100% !important;
-        font-size: 12px !important;
-      }
-
-      .load-status-bottom {
-        position: static !important;
-        font-size: 11px !important;
-      }
-    }
-
-    @media (max-width: 420px) {
-      .filters {
-        grid-template-columns: 1fr !important;
-      }
-
-      .card .value {
-        font-size: 18px !important;
-      }
-
-      canvas {
-        height: 225px !important;
-        max-height: 225px !important;
-      }
-
-      th, td {
-        font-size: 10px !important;
-        padding: 6px 6px !important;
-      }
-    }
-
-
-  
-    /* Mobile app-like experience */
-    .mobile-app-shell {
-      display: none;
-    }
-
-    @media (max-width: 768px) {
-      body {
-        padding-top: 68px !important;
-        padding-bottom: 86px !important;
-        background: #f6f0df !important;
-      }
-
-      .mobile-app-shell {
-        display: block;
-      }
-
-      .mobile-app-header {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        z-index: 10000;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        padding: 10px 12px;
-        background: rgba(45, 34, 12, 0.96);
-        color: #fff9e8;
-        box-shadow: 0 8px 24px rgba(45, 34, 12, 0.22);
-        backdrop-filter: blur(10px);
-      }
-
-      .mobile-app-title {
-        font-size: 15px;
-        font-weight: 950;
-        letter-spacing: 0.01em;
-        line-height: 1.1;
-      }
-
-      .mobile-app-subtitle {
-        font-size: 10px;
-        font-weight: 700;
-        color: #e9cf86;
-        margin-top: 2px;
-      }
-
-      .mobile-app-upload {
-        border: 1px solid rgba(255, 226, 145, 0.8);
-        background: #d4a634;
-        color: #211600;
-        border-radius: 999px;
-        padding: 8px 12px;
-        font-size: 11px;
-        font-weight: 950;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.18);
-      }
-
-      .mobile-bottom-tabs {
-        position: fixed;
-        left: 10px;
-        right: 10px;
-        bottom: 10px;
-        z-index: 10000;
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 4px;
-        padding: 7px;
-        background: rgba(45, 34, 12, 0.96);
-        border: 1px solid rgba(255, 226, 145, 0.28);
-        border-radius: 22px;
-        box-shadow: 0 -8px 26px rgba(45, 34, 12, 0.28);
-        backdrop-filter: blur(12px);
-      }
-
-      .mobile-tab {
-        min-width: 0;
-        border: 0;
-        background: transparent;
-        color: #f6e8bd;
-        border-radius: 16px;
-        padding: 7px 2px 6px;
-        font-size: 10px;
-        font-weight: 850;
-        line-height: 1.05;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 3px;
-        cursor: pointer;
-      }
-
-      .mobile-tab-icon {
-        font-size: 15px;
-        line-height: 1;
-      }
-
-      .mobile-tab.active,
-      .mobile-tab:active {
-        background: #d4a634;
-        color: #211600;
-      }
-
-      .topbar {
-        display: none !important;
-      }
-
-      .page {
-        min-height: 100vh;
-      }
-
-      .filters,
-      .card,
-      .panel,
-      .mini-table-panel,
-      .closed-month-panel,
-      .bottom-upload-panel {
-        box-shadow: 0 8px 22px rgba(80, 55, 5, 0.10) !important;
-      }
-
-      .section-title {
-        position: sticky;
-        top: 58px;
-        z-index: 50;
-        background: rgba(246, 240, 223, 0.94);
-        backdrop-filter: blur(8px);
-        padding: 8px 4px 7px;
-        border-bottom: 1px solid rgba(184, 138, 32, 0.18);
-      }
-
-      .section-note {
-        padding: 0 4px;
-      }
-
-      #sec-filters,
-      #sec-shipment,
-      #sec-depletion,
-      #sec-stock,
-      #sec-performance,
-      #sec-charts,
-      #sec-detail,
-      #sec-closed,
-      #csvFile {
-        scroll-margin-top: 78px;
-        scroll-margin-bottom: 96px;
-      }
-
-      .load-status-bottom,
-      .footer {
-        margin-bottom: 82px !important;
-      }
-    }
-
-  
-    /* Multi-page mobile app experience */
-    @media (min-width: 769px) {
-      .app-page {
-        display: block !important;
-      }
-    }
-
-    @media (max-width: 768px) {
-      .app-page {
-        display: none !important;
-        animation: appPageFade 160ms ease-out;
-      }
-
-      .app-page.active {
-        display: block !important;
-      }
-
-      .footer {
-        display: none !important;
-      }
-
-      .mobile-app-header {
-        cursor: default;
-      }
-
-      .mobile-app-header::after {
-        content: "Page mode";
-        font-size: 10px;
-        font-weight: 800;
-        color: rgba(255, 249, 232, 0.72);
-        margin-left: auto;
-        margin-right: 8px;
-      }
-
-      .app-page .section-title:first-child {
-        margin-top: 4px !important;
-      }
-
-      .app-page-upload {
-        padding-top: 8px;
-      }
-
-      .app-page-upload::before {
-        content: "Data Upload";
-        display: block;
-        font-size: 16px;
-        font-weight: 950;
-        color: #3b2a08;
-        margin: 4px 0 10px;
-      }
-
-      @keyframes appPageFade {
-        from {
-          opacity: 0;
-          transform: translateY(8px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-    }
-
   </style>
-
 </head>
 
-<body id="appTop">
+<body>
   <div class="page">
     <header class="topbar">
       <div class="brand-block dark-logo-area">
@@ -2465,7 +2006,7 @@
 
     <div class="pattern-strip"></div>
 
-    <section id="sec-filters" class="filters">
+    <section class="filters">
       <div class="filter-group">
         <label>Region / Division</label>
         <select id="divisionFilter"></select>
@@ -2488,8 +2029,7 @@
       </div>
     </section>
 
-    <section id="page-home" class="app-page app-page-home active">
-    <h2 id="sec-shipment" class="section-title">Shipment</h2>
+    <h2 class="section-title">Shipment</h2>
     <section class="cards combined-cards shipment-cards">
       <div class="card combo-card">
         <div class="label">Last Day Shipment</div>
@@ -2522,7 +2062,7 @@
       </div>
     </section>
 
-    <h2 id="sec-depletion" class="section-title">Depletion</h2>
+    <h2 class="section-title">Depletion</h2>
     <section class="cards combined-cards depletion-cards">
       <div class="card combo-card">
         <div class="label">Last Day Depletion</div>
@@ -2555,7 +2095,7 @@
       </div>
     </section>
 
-    <h2 id="sec-stock" class="section-title">Stock Level</h2>
+    <h2 class="section-title">Stock Level</h2>
     <section class="cards stock-cards">
       <div class="card combo-card stock-card">
         <div class="label">Stock Covering Days</div>
@@ -2602,10 +2142,6 @@
       </div>
     </section>
 
-    </section>
-
-    <section id="page-charts" class="app-page app-page-charts">
-    <div id="sec-charts"></div>
     <section class="grid">
       <div class="panel">
         <div class="panel-header">
@@ -2685,9 +2221,6 @@
       </div>
     </section>
 
-    </section>
-
-    <section id="page-upload" class="app-page app-page-upload">
     <section class="bottom-upload-panel">
       <div>
         <h2>Data Upload</h2>
@@ -2696,8 +2229,6 @@
     </section>
 
     <div id="loadStatus" class="load-status load-status-bottom" style="display:none;"></div>
-
-    </section>
 
     <div class="footer">
       Use final_kpi_report.csv only. It contains both Current Performance and Closed Month Performance rows. Filters are connected.
@@ -3720,29 +3251,6 @@
       exportClosedMatrixAsVisualCsv("closedAgentTable", "closed_month_by_agent_visual.csv");
     }
 
-
-    function enableMobileTableTouchScroll() {
-      document.querySelectorAll(".mini-table-wrap, .closed-month-wrap, .table-wrap").forEach(wrap => {
-        if (wrap.dataset.touchScrollReady === "1") return;
-        wrap.dataset.touchScrollReady = "1";
-        let startX = 0;
-        let startScrollLeft = 0;
-
-        wrap.addEventListener("touchstart", e => {
-          if (!e.touches || !e.touches.length) return;
-          startX = e.touches[0].pageX;
-          startScrollLeft = wrap.scrollLeft;
-        }, { passive: true });
-
-        wrap.addEventListener("touchmove", e => {
-          if (!e.touches || !e.touches.length) return;
-          const x = e.touches[0].pageX;
-          const walk = startX - x;
-          wrap.scrollLeft = startScrollLeft + walk;
-        }, { passive: true });
-      });
-    }
-
     function applyFilters() {
       updateConnectedFilters();
 
@@ -3754,7 +3262,6 @@
       updateCharts(filteredData);
       renderTable(filteredData);
       updateClosedMonthTables();
-      enableMobileTableTouchScroll();
 
       setStatus(`Loaded ${rawData.length.toLocaleString()} rows. Showing ${filteredData.length.toLocaleString()} rows.`, "success");
     }
@@ -4358,39 +3865,5 @@ function renderTable(data) {
 
     loadDefaultCsv();
   </script>
-
-  <div class="mobile-app-shell" aria-label="Mobile app navigation">
-    <div class="mobile-app-header">
-      <div>
-        <div class="mobile-app-title">Habesha Dashboard</div>
-        <div class="mobile-app-subtitle">Sales Performance</div>
-      </div>
-      <button type="button" class="mobile-app-upload" onclick="showMobilePage('page-upload')">Upload</button>
-    </div>
-
-    <nav class="mobile-bottom-tabs">
-      <button type="button" class="mobile-tab active" data-page="page-home" onclick="showMobilePage('page-home')">
-        <span class="mobile-tab-icon">⌂</span>
-        <span>Home</span>
-      </button>
-      <button type="button" class="mobile-tab" data-page="page-performance" onclick="showMobilePage('page-performance')">
-        <span class="mobile-tab-icon">▦</span>
-        <span>Perf.</span>
-      </button>
-      <button type="button" class="mobile-tab" data-page="page-charts" onclick="showMobilePage('page-charts')">
-        <span class="mobile-tab-icon">◒</span>
-        <span>Charts</span>
-      </button>
-      <button type="button" class="mobile-tab" data-page="page-detail" onclick="showMobilePage('page-detail')">
-        <span class="mobile-tab-icon">☷</span>
-        <span>Detail</span>
-      </button>
-      <button type="button" class="mobile-tab" data-page="page-closed" onclick="showMobilePage('page-closed')">
-        <span class="mobile-tab-icon">▣</span>
-        <span>Closed</span>
-      </button>
-    </nav>
-  </div>
-
 </body>
 </html>
