@@ -6,21 +6,13 @@
   <title>Habesha Volume Performance Dashboard</title>
 
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">
-
     function scrollToDashboardSection(id) {
-      if (window.matchMedia && window.matchMedia("(max-width: 768px)").matches) {
-        openPageForSection(id);
-        return;
-      }
-
       if (id === "top") id = "appTop";
-
       const el = document.getElementById(id);
       if (!el) {
         window.scrollTo({ top: 0, behavior: "smooth" });
         return;
       }
-
       el.scrollIntoView({ behavior: "smooth", block: "start", inline: "nearest" });
     }
 
@@ -29,30 +21,10 @@
         btn.classList.toggle("active", btn.dataset.target === id);
       });
     }
-
     function showMobilePage(pageId) {
-      const pages = document.querySelectorAll(".app-page");
-      const tabs = document.querySelectorAll(".mobile-tab");
-
-      pages.forEach(page => {
-        page.classList.toggle("active", page.id === pageId);
-      });
-
-      tabs.forEach(tab => {
-        tab.classList.toggle("active", tab.dataset.page === pageId);
-      });
-
+      // Final version is one-page on mobile; page switching is intentionally disabled.
+      document.querySelectorAll(".app-page").forEach(page => page.classList.add("active"));
       window.scrollTo({ top: 0, behavior: "smooth" });
-
-      // Make charts redraw after their page becomes visible.
-      setTimeout(() => {
-        Object.values(charts || {}).forEach(chart => {
-          if (chart && typeof chart.resize === "function") {
-            chart.resize();
-          }
-        });
-        enableMobileTableTouchScroll();
-      }, 180);
     }
 
     function openPageForSection(id) {
@@ -80,15 +52,7 @@
         }
       }, 220);
     }
-
-  
-    document.addEventListener("DOMContentLoaded", () => {
-      if (window.matchMedia && window.matchMedia("(max-width: 768px)").matches) {
-        showMobilePage("page-home");
-      }
-    });
-
-  </script>
+</script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 
@@ -2447,6 +2411,104 @@
       }
     }
 
+  
+    /* Final mobile one-page app feel: no buttons, no page switching */
+    .mobile-app-shell,
+    .mobile-bottom-tabs,
+    .mobile-app-header,
+    .mobile-quick-nav {
+      display: none !important;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        background: #f6f0df !important;
+      }
+
+      .app-page,
+      .app-page.active {
+        display: block !important;
+        animation: none !important;
+      }
+
+      .page {
+        padding-bottom: 18px !important;
+      }
+
+      .topbar {
+        display: block !important;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        background: rgba(45, 34, 12, 0.96) !important;
+        color: #fff9e8 !important;
+        box-shadow: 0 8px 24px rgba(45, 34, 12, 0.22) !important;
+        backdrop-filter: blur(10px);
+      }
+
+      .topbar .title h1,
+      .topbar .title p {
+        color: #fff9e8 !important;
+      }
+
+      .topbar .title p {
+        color: #e9cf86 !important;
+      }
+
+      .section-title {
+        position: sticky;
+        top: 72px;
+        z-index: 900;
+        background: rgba(246, 240, 223, 0.96);
+        backdrop-filter: blur(8px);
+        padding: 8px 4px 7px;
+        border-bottom: 1px solid rgba(184, 138, 32, 0.18);
+      }
+
+      .filters,
+      .card,
+      .panel,
+      .mini-table-panel,
+      .closed-month-panel,
+      .bottom-upload-panel {
+        box-shadow: 0 8px 22px rgba(80, 55, 5, 0.10) !important;
+      }
+
+      .bottom-upload-panel {
+        margin-top: 22px !important;
+        margin-bottom: 14px !important;
+      }
+
+      .app-page-upload::before {
+        content: "Data Upload";
+        display: block;
+        font-size: 16px;
+        font-weight: 950;
+        color: #3b2a08;
+        margin: 18px 0 10px;
+      }
+
+      .footer {
+        display: block !important;
+        margin-bottom: 0 !important;
+      }
+
+      #sec-filters,
+      #sec-shipment,
+      #sec-depletion,
+      #sec-stock,
+      #sec-performance,
+      #sec-charts,
+      #sec-detail,
+      #sec-closed,
+      #csvFile {
+        scroll-margin-top: 92px;
+        scroll-margin-bottom: 20px;
+      }
+    }
+
   </style>
 
 </head>
@@ -2604,7 +2666,7 @@
 
     </section>
 
-    <section id="page-charts" class="app-page app-page-charts">
+    <section id="page-charts" class="app-page app-page-charts active">
     <div id="sec-charts"></div>
     <section class="grid">
       <div class="panel">
@@ -2687,7 +2749,7 @@
 
     </section>
 
-    <section id="page-upload" class="app-page app-page-upload">
+    <section id="page-upload" class="app-page app-page-upload active">
     <section class="bottom-upload-panel">
       <div>
         <h2>Data Upload</h2>
@@ -4358,39 +4420,6 @@ function renderTable(data) {
 
     loadDefaultCsv();
   </script>
-
-  <div class="mobile-app-shell" aria-label="Mobile app navigation">
-    <div class="mobile-app-header">
-      <div>
-        <div class="mobile-app-title">Habesha Dashboard</div>
-        <div class="mobile-app-subtitle">Sales Performance</div>
-      </div>
-      <button type="button" class="mobile-app-upload" onclick="showMobilePage('page-upload')">Upload</button>
-    </div>
-
-    <nav class="mobile-bottom-tabs">
-      <button type="button" class="mobile-tab active" data-page="page-home" onclick="showMobilePage('page-home')">
-        <span class="mobile-tab-icon">⌂</span>
-        <span>Home</span>
-      </button>
-      <button type="button" class="mobile-tab" data-page="page-performance" onclick="showMobilePage('page-performance')">
-        <span class="mobile-tab-icon">▦</span>
-        <span>Perf.</span>
-      </button>
-      <button type="button" class="mobile-tab" data-page="page-charts" onclick="showMobilePage('page-charts')">
-        <span class="mobile-tab-icon">◒</span>
-        <span>Charts</span>
-      </button>
-      <button type="button" class="mobile-tab" data-page="page-detail" onclick="showMobilePage('page-detail')">
-        <span class="mobile-tab-icon">☷</span>
-        <span>Detail</span>
-      </button>
-      <button type="button" class="mobile-tab" data-page="page-closed" onclick="showMobilePage('page-closed')">
-        <span class="mobile-tab-icon">▣</span>
-        <span>Closed</span>
-      </button>
-    </nav>
-  </div>
 
 </body>
 </html>
