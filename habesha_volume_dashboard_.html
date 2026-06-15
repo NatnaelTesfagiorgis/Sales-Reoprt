@@ -52,68 +52,7 @@
         }
       }, 220);
     }
-
-    function compactAchievementColumns() {
-      const tableIds = [
-        "regionalTable",
-        "brandRegionPerformanceTable",
-        "dataTable",
-        "closedRegionTable",
-        "closedBrandTable",
-        "closedAgentTable"
-      ];
-
-      tableIds.forEach(tableId => {
-        const table = document.getElementById(tableId);
-        if (!table) return;
-
-        table.querySelectorAll(".ach-compact").forEach(cell => cell.classList.remove("ach-compact"));
-
-        const headerRows = Array.from(table.querySelectorAll("thead tr"));
-        const bodyRows = Array.from(table.querySelectorAll("tbody tr"));
-        if (!headerRows.length) return;
-
-        const lastHeader = headerRows[headerRows.length - 1];
-        const achIndexes = [];
-
-        Array.from(lastHeader.children).forEach((th, idx) => {
-          const txt = (th.textContent || "").trim().toLowerCase();
-          if (
-            txt === "ach" ||
-            txt === "ach%" ||
-            txt.includes("ach %") ||
-            txt.includes("achievement")
-          ) {
-            achIndexes.push(idx);
-            th.classList.add("ach-compact");
-          }
-        });
-
-        // Also mark first header row month cells that directly say Ach/Ach%.
-        headerRows.forEach(row => {
-          Array.from(row.children).forEach(th => {
-            const txt = (th.textContent || "").trim().toLowerCase();
-            if (txt === "ach" || txt === "ach%" || txt.includes("achievement")) {
-              th.classList.add("ach-compact");
-            }
-          });
-        });
-
-        bodyRows.forEach(row => {
-          achIndexes.forEach(idx => {
-            const cell = row.children[idx];
-            if (cell) cell.classList.add("ach-compact");
-          });
-        });
-      });
-    }
-
-  
-    document.addEventListener("DOMContentLoaded", () => {
-      setTimeout(compactAchievementColumns, 600);
-    });
-
-  </script>
+</script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 
@@ -2570,236 +2509,6 @@
       }
     }
 
-  
-    /* Final phone refinements: closed months before detailed, fixed agent, smaller detailed report */
-    @media (max-width: 768px) {
-      /* Detailed report is now after Closed Month visuals */
-      .closed-month-grid {
-        margin-top: 12px !important;
-        margin-bottom: 18px !important;
-      }
-
-      .table-panel {
-        margin-top: 18px !important;
-      }
-
-      .table-panel .table-top h2::after {
-        content: " - Last section";
-        font-size: 10px;
-        font-weight: 800;
-        color: #8a5f00;
-      }
-
-      /* Detailed Report: smaller font and larger horizontal canvas */
-      #page-charts .table-wrap,
-      .table-panel .table-wrap {
-        max-height: 700px !important;
-        overflow-x: auto !important;
-        overflow-y: auto !important;
-        -webkit-overflow-scrolling: touch !important;
-        touch-action: pan-x pan-y !important;
-      }
-
-      #dataTable {
-        min-width: 1580px !important;
-        table-layout: auto !important;
-        border-collapse: separate !important;
-        border-spacing: 0 !important;
-      }
-
-      #dataTable th,
-      #dataTable td {
-        font-size: 8.6px !important;
-        padding: 5px 5px !important;
-        line-height: 1.12 !important;
-        white-space: nowrap !important;
-      }
-
-      /* Detailed Report fixed columns: Division + Agent */
-      #dataTable th:nth-child(1),
-      #dataTable td:nth-child(1) {
-        position: sticky !important;
-        left: 0 !important;
-        min-width: 78px !important;
-        max-width: 78px !important;
-        width: 78px !important;
-        z-index: 65 !important;
-        background: #fffdf7 !important;
-        box-shadow: 5px 0 7px rgba(80,55,5,0.14) !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-      }
-
-      #dataTable th:nth-child(2),
-      #dataTable td:nth-child(2) {
-        position: sticky !important;
-        left: 78px !important;
-        min-width: 128px !important;
-        max-width: 128px !important;
-        width: 128px !important;
-        z-index: 64 !important;
-        background: #fffdf7 !important;
-        box-shadow: 5px 0 7px rgba(80,55,5,0.14) !important;
-        border-right: 4px solid #d6b24a !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-      }
-
-      #dataTable thead th:nth-child(1),
-      #dataTable thead th:nth-child(2) {
-        background: #fff4cf !important;
-        z-index: 140 !important;
-      }
-
-      /* Closed Month visuals: stop first Target header from sliding over Region/Brand header */
-      #closedRegionTable,
-      #closedBrandTable,
-      #closedAgentTable {
-        border-collapse: separate !important;
-        border-spacing: 0 !important;
-      }
-
-      #closedRegionTable thead th:first-child,
-      #closedBrandTable thead th:first-child {
-        position: sticky !important;
-        left: 0 !important;
-        z-index: 220 !important;
-        background: #fff4cf !important;
-        box-shadow: 8px 0 12px rgba(80,55,5,0.22) !important;
-        border-right: 5px solid #d6b24a !important;
-      }
-
-      #closedRegionTable tbody td:first-child,
-      #closedBrandTable tbody td:first-child {
-        position: sticky !important;
-        left: 0 !important;
-        z-index: 180 !important;
-        background: #fffdf7 !important;
-        box-shadow: 8px 0 12px rgba(80,55,5,0.18) !important;
-        border-right: 5px solid #d6b24a !important;
-      }
-
-      #closedRegionTable thead th:not(:first-child),
-      #closedBrandTable thead th:not(:first-child) {
-        z-index: 20 !important;
-      }
-
-      /* Closed Agent has two fixed columns, keep them above moving month headers */
-      #closedAgentTable thead .closed-sticky-division,
-      #closedAgentTable thead .closed-sticky-agent {
-        z-index: 230 !important;
-        background: #fff4cf !important;
-      }
-
-      #closedAgentTable tbody .closed-sticky-division,
-      #closedAgentTable tbody .closed-sticky-agent {
-        z-index: 185 !important;
-        background: #fffdf7 !important;
-      }
-
-      #closedAgentTable thead th:not(.closed-sticky-division):not(.closed-sticky-agent) {
-        z-index: 20 !important;
-      }
-    }
-
-    @media (max-width: 420px) {
-      #dataTable th,
-      #dataTable td {
-        font-size: 7.9px !important;
-        padding: 4px 4px !important;
-      }
-
-      #dataTable th:nth-child(1),
-      #dataTable td:nth-child(1) {
-        min-width: 70px !important;
-        max-width: 70px !important;
-        width: 70px !important;
-      }
-
-      #dataTable th:nth-child(2),
-      #dataTable td:nth-child(2) {
-        left: 70px !important;
-        min-width: 112px !important;
-        max-width: 112px !important;
-        width: 112px !important;
-      }
-    }
-
-  
-    /* Final ordering: Detailed Report after Brand Performance */
-    @media (max-width: 768px) {
-      .performance-grid {
-        margin-bottom: 14px !important;
-      }
-
-      .table-panel {
-        margin-top: 12px !important;
-        margin-bottom: 18px !important;
-      }
-
-      .table-panel .table-top h2::after {
-        content: "" !important;
-      }
-
-      .closed-month-grid {
-        margin-top: 18px !important;
-      }
-    }
-
-  
-    /* Compact achievement columns across all visuals */
-    th.ach-compact,
-    td.ach-compact {
-      width: 58px !important;
-      min-width: 58px !important;
-      max-width: 58px !important;
-      padding-left: 4px !important;
-      padding-right: 4px !important;
-      text-align: center !important;
-      white-space: nowrap !important;
-    }
-
-    th.ach-compact {
-      font-size: 10px !important;
-      line-height: 1.05 !important;
-    }
-
-    td.ach-compact {
-      font-size: 10px !important;
-      font-weight: 850 !important;
-    }
-
-    @media (max-width: 768px) {
-      th.ach-compact,
-      td.ach-compact {
-        width: 42px !important;
-        min-width: 42px !important;
-        max-width: 42px !important;
-        padding-left: 2px !important;
-        padding-right: 2px !important;
-      }
-
-      th.ach-compact {
-        font-size: 8px !important;
-      }
-
-      td.ach-compact {
-        font-size: 8.2px !important;
-      }
-
-      /* Keep closed month Ach% subcolumns extra compact */
-      #closedRegionTable th.ach-compact,
-      #closedRegionTable td.ach-compact,
-      #closedBrandTable th.ach-compact,
-      #closedBrandTable td.ach-compact,
-      #closedAgentTable th.ach-compact,
-      #closedAgentTable td.ach-compact {
-        width: 38px !important;
-        min-width: 38px !important;
-        max-width: 38px !important;
-      }
-    }
-
   </style>
 
 </head>
@@ -2955,22 +2664,6 @@
       </div>
     </section>
 
-    <section class="table-panel">
-      <div class="table-top">
-        <h2>Detailed Report</h2>
-        <div class="panel-header-actions">
-          <button class="export-btn" onclick="exportDetailedReportCsv()">Export CSV</button>
-          <input id="tableSearch" class="search" type="text" placeholder="Search agent / division..." />
-        </div>
-      </div>
-      <div class="table-wrap">
-        <table id="dataTable">
-          <thead></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
-
     </section>
 
     <section id="page-charts" class="app-page app-page-charts active">
@@ -2988,6 +2681,22 @@
           <h2>Brand Sales Mix</h2>
         </div>
         <canvas id="brandChart"></canvas>
+      </div>
+    </section>
+
+    <section class="table-panel">
+      <div class="table-top">
+        <h2>Detailed Report</h2>
+        <div class="panel-header-actions">
+          <button class="export-btn" onclick="exportDetailedReportCsv()">Export CSV</button>
+          <input id="tableSearch" class="search" type="text" placeholder="Search agent / division..." />
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="dataTable">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
       </div>
     </section>
 
@@ -3037,8 +2746,6 @@
         </div>
       </div>
     </section>
-
-    
 
     </section>
 
@@ -4109,7 +3816,6 @@
       updateCharts(filteredData);
       renderTable(filteredData);
       updateClosedMonthTables();
-      compactAchievementColumns();
       enableMobileTableTouchScroll();
 
       setStatus(`Loaded ${rawData.length.toLocaleString()} rows. Showing ${filteredData.length.toLocaleString()} rows.`, "success");
