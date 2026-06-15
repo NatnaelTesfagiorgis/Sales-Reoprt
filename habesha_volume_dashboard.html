@@ -3192,39 +3192,6 @@
       }
     }
 
-  
-    /* Chart layout refinement: wider Top Agents, taller Brand Sales Mix */
-    .grid:has(#agentChart) {
-      grid-template-columns: minmax(0, 1.65fr) minmax(280px, 0.85fr) !important;
-      align-items: stretch !important;
-    }
-
-    #agentChart {
-      height: 340px !important;
-      max-height: 340px !important;
-    }
-
-    #brandChart {
-      height: 430px !important;
-      max-height: 430px !important;
-    }
-
-    @media (max-width: 768px) {
-      .grid:has(#agentChart) {
-        display: block !important;
-      }
-
-      #agentChart {
-        height: 300px !important;
-        max-height: 300px !important;
-      }
-
-      #brandChart {
-        height: 390px !important;
-        max-height: 390px !important;
-      }
-    }
-
   </style>
 
 </head>
