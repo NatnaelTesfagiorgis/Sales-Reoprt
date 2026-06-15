@@ -111,7 +111,120 @@
   
     document.addEventListener("DOMContentLoaded", () => {
       setTimeout(compactAchievementColumns, 600);
+      setTimeout(makeDetailedReportHeadersCompact, 650);
     });
+
+  
+    function makeDetailedReportHeadersCompact() {
+      const table = document.getElementById("dataTable");
+      if (!table) return;
+
+      const headerCells = Array.from(table.querySelectorAll("thead th"));
+      if (!headerCells.length) return;
+
+      const splitHeader = (text) => {
+        const clean = String(text || "").trim();
+
+        const map = {
+          "Division": "Div.",
+          "Agent": "Agent",
+          "Brand": "Brand",
+          "UOM": "UOM",
+          "Target Type": "Target<br>Type",
+          "Beginning_Stock": "Beginning<br>Stock",
+          "Beginning Stock": "Beginning<br>Stock",
+          "MTD_Sales": "MTD<br>Sales",
+          "MTD Sales": "MTD<br>Sales",
+          "MTD_PY": "MTD<br>PY",
+          "MTD PY": "MTD<br>PY",
+          "MTD_Depletion": "MTD<br>Depl.",
+          "MTD Depletion": "MTD<br>Depl.",
+          "MTD_Target": "MTD<br>Target",
+          "MTD Target": "MTD<br>Target",
+          "MTD_Achievement %": "MTD<br>Ach%",
+          "MTD Achievement %": "MTD<br>Ach%",
+          "YTD_Sales": "YTD<br>Sales",
+          "YTD Sales": "YTD<br>Sales",
+          "YTD_PY": "YTD<br>PY",
+          "YTD PY": "YTD<br>PY",
+          "YTD_Depletion": "YTD<br>Depl.",
+          "YTD Depletion": "YTD<br>Depl.",
+          "YTD_Target": "YTD<br>Target",
+          "YTD Target": "YTD<br>Target",
+          "YTD_Achievement %": "YTD<br>Ach%",
+          "YTD Achievement %": "YTD<br>Ach%",
+          "Full_Month_Target": "Full Month<br>Target",
+          "Full Month Target": "Full Month<br>Target",
+          "Full_Year_Target": "Full Year<br>Target",
+          "Full Year Target": "Full Year<br>Target",
+          "Rolling_Stock_Raw": "Rolling<br>Stock Raw",
+          "Negative_Rolling_Stock_Excluded": "Negative<br>Stock Excl.",
+          "Stock_per_Agent": "Stock<br>Balance",
+          "Stock per Agent": "Stock<br>Balance",
+          "Avg_Daily_Depletion": "Avg Daily<br>Depl.",
+          "Avg Daily Depletion": "Avg Daily<br>Depl.",
+          "Days of Stock": "Days<br>Stock",
+          "Stock Level Flag": "Stock<br>Flag",
+          "Achievement %": "Ach%",
+          "Ach %": "Ach%",
+          "Ach%": "Ach%"
+        };
+
+        if (map[clean]) return map[clean];
+
+        if (/achievement/i.test(clean)) {
+          return clean.replace(/achievement/ig, "Ach").replace(/\s*%\s*/g, "%").replace(/\s+/g, "<br>");
+        }
+
+        if (/ach/i.test(clean)) {
+          return clean.replace(/\s+/g, "<br>");
+        }
+
+        if (clean.length > 10 && clean.includes(" ")) {
+          const parts = clean.split(/\s+/);
+          const mid = Math.ceil(parts.length / 2);
+          return parts.slice(0, mid).join(" ") + "<br>" + parts.slice(mid).join(" ");
+        }
+
+        if (clean.includes("_")) {
+          const parts = clean.split("_");
+          const mid = Math.ceil(parts.length / 2);
+          return parts.slice(0, mid).join(" ") + "<br>" + parts.slice(mid).join(" ");
+        }
+
+        return clean;
+      };
+
+      headerCells.forEach((th, index) => {
+        const original = th.dataset.originalHeader || (th.textContent || "").trim();
+        th.dataset.originalHeader = original;
+
+        const isAch = /ach|achievement/i.test(original);
+        if (isAch) {
+          th.classList.add("ach-compact", "detail-ach-compact");
+        }
+
+        th.innerHTML = `<span class="th-two-line">${splitHeader(original)}</span>`;
+      });
+
+      const lastHeader = Array.from(table.querySelectorAll("thead tr")).pop();
+      if (!lastHeader) return;
+
+      const achIndexes = [];
+      Array.from(lastHeader.children).forEach((th, idx) => {
+        const original = th.dataset.originalHeader || th.textContent || "";
+        if (/ach|achievement/i.test(original)) {
+          achIndexes.push(idx);
+        }
+      });
+
+      table.querySelectorAll("tbody tr").forEach(row => {
+        achIndexes.forEach(idx => {
+          const cell = row.children[idx];
+          if (cell) cell.classList.add("ach-compact", "detail-ach-compact");
+        });
+      });
+    }
 
   </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -2800,6 +2913,214 @@
       }
     }
 
+  
+    /* Strong closed-month sticky first-column overlay fix */
+    .closed-month-wrap {
+      position: relative !important;
+      isolation: isolate !important;
+    }
+
+    #closedRegionTable,
+    #closedBrandTable,
+    #closedAgentTable {
+      border-collapse: separate !important;
+      border-spacing: 0 !important;
+    }
+
+    #closedRegionTable th:first-child,
+    #closedRegionTable td:first-child,
+    #closedBrandTable th:first-child,
+    #closedBrandTable td:first-child {
+      position: sticky !important;
+      left: 0 !important;
+      min-width: 132px !important;
+      max-width: 132px !important;
+      width: 132px !important;
+      background-clip: padding-box !important;
+      box-shadow: 10px 0 0 #fffdf7, 12px 0 14px rgba(80,55,5,0.22) !important;
+      border-right: 5px solid #d6b24a !important;
+    }
+
+    #closedRegionTable thead th:first-child,
+    #closedBrandTable thead th:first-child {
+      z-index: 999 !important;
+      background: #fff4cf !important;
+      box-shadow: 10px 0 0 #fff4cf, 12px 0 14px rgba(80,55,5,0.24) !important;
+    }
+
+    #closedRegionTable tbody td:first-child,
+    #closedBrandTable tbody td:first-child {
+      z-index: 900 !important;
+      background: #fffdf7 !important;
+    }
+
+    #closedRegionTable thead th:not(:first-child),
+    #closedRegionTable tbody td:not(:first-child),
+    #closedBrandTable thead th:not(:first-child),
+    #closedBrandTable tbody td:not(:first-child) {
+      position: relative !important;
+      z-index: 1 !important;
+    }
+
+    /* Closed Month by Agent has two fixed columns: Division and Agent */
+    #closedAgentTable .closed-sticky-division {
+      position: sticky !important;
+      left: 0 !important;
+      min-width: 96px !important;
+      max-width: 96px !important;
+      width: 96px !important;
+      border-right: 0 !important;
+      background-clip: padding-box !important;
+      box-shadow: 8px 0 0 #fffdf7 !important;
+    }
+
+    #closedAgentTable .closed-sticky-agent {
+      position: sticky !important;
+      left: 96px !important;
+      min-width: 140px !important;
+      max-width: 140px !important;
+      width: 140px !important;
+      border-right: 5px solid #d6b24a !important;
+      background-clip: padding-box !important;
+      box-shadow: 10px 0 0 #fffdf7, 12px 0 14px rgba(80,55,5,0.22) !important;
+    }
+
+    #closedAgentTable thead .closed-sticky-division,
+    #closedAgentTable thead .closed-sticky-agent {
+      z-index: 999 !important;
+      background: #fff4cf !important;
+    }
+
+    #closedAgentTable thead .closed-sticky-division {
+      box-shadow: 8px 0 0 #fff4cf !important;
+    }
+
+    #closedAgentTable thead .closed-sticky-agent {
+      box-shadow: 10px 0 0 #fff4cf, 12px 0 14px rgba(80,55,5,0.24) !important;
+    }
+
+    #closedAgentTable tbody .closed-sticky-division,
+    #closedAgentTable tbody .closed-sticky-agent {
+      z-index: 900 !important;
+      background: #fffdf7 !important;
+    }
+
+    #closedAgentTable thead th:not(.closed-sticky-division):not(.closed-sticky-agent),
+    #closedAgentTable tbody td:not(.closed-sticky-division):not(.closed-sticky-agent) {
+      position: relative !important;
+      z-index: 1 !important;
+    }
+
+    @media (max-width: 768px) {
+      #closedRegionTable th:first-child,
+      #closedRegionTable td:first-child,
+      #closedBrandTable th:first-child,
+      #closedBrandTable td:first-child {
+        min-width: 112px !important;
+        max-width: 112px !important;
+        width: 112px !important;
+      }
+
+      #closedAgentTable .closed-sticky-division {
+        min-width: 84px !important;
+        max-width: 84px !important;
+        width: 84px !important;
+      }
+
+      #closedAgentTable .closed-sticky-agent {
+        left: 84px !important;
+        min-width: 126px !important;
+        max-width: 126px !important;
+        width: 126px !important;
+      }
+    }
+
+  
+    /* Detailed Report compact two-line headers + compact Ach columns */
+    #dataTable thead th {
+      vertical-align: middle !important;
+    }
+
+    #dataTable thead th .th-two-line {
+      display: inline-block;
+      line-height: 1.05;
+      white-space: normal;
+      text-align: center;
+      max-width: 86px;
+    }
+
+    #dataTable thead th.detail-ach-compact,
+    #dataTable tbody td.detail-ach-compact,
+    #dataTable thead th.ach-compact,
+    #dataTable tbody td.ach-compact {
+      width: 44px !important;
+      min-width: 44px !important;
+      max-width: 44px !important;
+      padding-left: 2px !important;
+      padding-right: 2px !important;
+      text-align: center !important;
+      white-space: nowrap !important;
+    }
+
+    #dataTable thead th.detail-ach-compact .th-two-line,
+    #dataTable thead th.ach-compact .th-two-line {
+      max-width: 38px !important;
+      white-space: normal !important;
+    }
+
+    @media (max-width: 768px) {
+      #dataTable thead th {
+        height: 34px !important;
+        min-height: 34px !important;
+        padding-top: 3px !important;
+        padding-bottom: 3px !important;
+        font-size: 7.7px !important;
+        line-height: 1.02 !important;
+      }
+
+      #dataTable thead th .th-two-line {
+        max-width: 58px !important;
+        line-height: 1.02 !important;
+      }
+
+      #dataTable tbody td {
+        font-size: 7.9px !important;
+        padding-top: 4px !important;
+        padding-bottom: 4px !important;
+      }
+
+      #dataTable thead th.detail-ach-compact,
+      #dataTable tbody td.detail-ach-compact,
+      #dataTable thead th.ach-compact,
+      #dataTable tbody td.ach-compact {
+        width: 34px !important;
+        min-width: 34px !important;
+        max-width: 34px !important;
+        font-size: 7.4px !important;
+      }
+
+      #dataTable thead th.detail-ach-compact .th-two-line,
+      #dataTable thead th.ach-compact .th-two-line {
+        max-width: 30px !important;
+      }
+
+      /* keep fixed columns readable even after the smaller font */
+      #dataTable th:nth-child(1),
+      #dataTable td:nth-child(1) {
+        min-width: 72px !important;
+        max-width: 72px !important;
+        width: 72px !important;
+      }
+
+      #dataTable th:nth-child(2),
+      #dataTable td:nth-child(2) {
+        left: 72px !important;
+        min-width: 112px !important;
+        max-width: 112px !important;
+        width: 112px !important;
+      }
+    }
+
   </style>
 
 </head>
@@ -4110,6 +4431,7 @@
       renderTable(filteredData);
       updateClosedMonthTables();
       compactAchievementColumns();
+      makeDetailedReportHeadersCompact();
       enableMobileTableTouchScroll();
 
       setStatus(`Loaded ${rawData.length.toLocaleString()} rows. Showing ${filteredData.length.toLocaleString()} rows.`, "success");
