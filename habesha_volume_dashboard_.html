@@ -3146,52 +3146,6 @@
       }
     }
 
-  
-    /* Small report as-of description on Last Day Shipment card */
-    .card-small-desc {
-      margin-top: -4px;
-      margin-bottom: 5px;
-      font-size: 10px;
-      font-weight: 750;
-      color: #8a5f00;
-      opacity: 0.85;
-      line-height: 1.1;
-    }
-
-    @media (max-width: 768px) {
-      .card-small-desc {
-        font-size: 9px !important;
-        margin-top: -2px;
-        margin-bottom: 4px;
-      }
-    }
-
-  
-    /* Regional Performance: compact last-day columns */
-    #regionalTable th:nth-child(2),
-    #regionalTable td:nth-child(2),
-    #regionalTable th:nth-child(3),
-    #regionalTable td:nth-child(3) {
-      min-width: 76px !important;
-      max-width: 82px !important;
-      width: 78px !important;
-    }
-
-    @media (max-width: 768px) {
-      #regionalTable th:nth-child(2),
-      #regionalTable td:nth-child(2),
-      #regionalTable th:nth-child(3),
-      #regionalTable td:nth-child(3) {
-        min-width: 58px !important;
-        max-width: 62px !important;
-        width: 60px !important;
-      }
-
-      #regionalTable {
-        min-width: 1320px !important;
-      }
-    }
-
   </style>
 
 </head>
@@ -3238,7 +3192,6 @@
     <section class="cards combined-cards shipment-cards">
       <div class="card combo-card">
         <div class="label">Last Day Shipment</div>
-        <div id="lastDayReportDateText" class="card-small-desc">As of last day</div>
         <div id="lastDaySalesCard" class="value">0</div>
         <div class="combo-line"><span>Vs Target</span><strong id="lastDaySalesAchCard">0%</strong></div>
         <div class="combo-line"><span>Variance</span><strong id="lastDaySalesVarCard">0</strong></div>
@@ -4515,46 +4468,7 @@
       return data.reduce((acc, r) => acc + toNum(r[col]), 0);
     }
 
-
-    function getReportAsOfDate(data) {
-      if (!data || !data.length) return "";
-
-      const possibleCols = [
-        "Report_As_Of_Date",
-        "Report As Of Date",
-        "Last_Shipment_Date",
-        "Last Shipment Date",
-        "As_Of_Date",
-        "As Of Date",
-        "Last_Day_Date",
-        "Last Day Date"
-      ];
-
-      for (const col of possibleCols) {
-        const values = data
-          .map(r => (r[col] || "").toString().trim())
-          .filter(v => v && v.toLowerCase() !== "nan" && v.toLowerCase() !== "none");
-
-        if (values.length) {
-          const unique = [...new Set(values)];
-          return unique[0];
-        }
-      }
-
-      return "";
-    }
-
-    function updateLastDayDescription(data) {
-      const el = $("lastDayReportDateText");
-      if (!el) return;
-
-      const asOfDate = getReportAsOfDate(data);
-      el.textContent = asOfDate ? `As of ${asOfDate}` : "As of last available shipment day";
-    }
-
     function updateCards(data) {
-      updateLastDayDescription(data);
-
       function setCard(valueId, achId, varId, pyId, valueCol, targetCol, pyCol) {
         const value = sum(data, valueCol);
         const target = sum(data, targetCol);
@@ -4606,8 +4520,6 @@
         if (!map.has(key)) {
           map.set(key, {
             name: key,
-            Last_Day_Sales: 0,
-            Last_Day_Target: 0,
             MTD_Sales: 0,
             MTD_Target: 0,
             MTD_Depletion: 0,
@@ -4624,8 +4536,6 @@
         }
 
         const item = map.get(key);
-        item.Last_Day_Sales += toNum(r["Last_Day_Sales"]);
-        item.Last_Day_Target += toNum(r["Last_Day_Target"]);
         item.MTD_Sales += toNum(r["MTD_Sales"]);
         item.MTD_Target += toNum(r["MTD_Target"]);
         item.MTD_Depletion += toNum(r["MTD_Depletion"]);
@@ -4641,7 +4551,6 @@
       });
 
       let rows = [...map.values()].map(r => {
-        r["Last Day Ach"] = r.Last_Day_Target === 0 ? 0 : (r.Last_Day_Sales / r.Last_Day_Target) - 1;
         r["MTD Ach"] = r.MTD_Target === 0 ? 0 : (r.MTD_Sales / r.MTD_Target) - 1;
         r["MTD Sales vs PY"] = r.MTD_PY === 0 ? 0 : (r.MTD_Sales / r.MTD_PY) - 1;
         r["MTD Depletion Ach"] = r.MTD_Target === 0 ? 0 : (r.MTD_Depletion / r.MTD_Target) - 1;
@@ -4727,7 +4636,7 @@ function renderMiniPerformanceTable(tableId, rows, firstColName, mode = "regiona
 
       const cols = mode === "brand"
         ? ["Brand", "MTD Target", "MTD Sipm", "Ach%", "MTD Sales vs PY", "YTD Target", "YTD Sipm", "Ach%", "YTD Sales vs PY", "MTD Dip Target", "MTD Dip", "Ach%", "MTD Depletion vs PY", "YTD Dip Target", "YTD Dip", "Ach%", "YTD Depletion vs PY"]
-        : [firstColName, "LD Target", "LD Ship", "Ach%", "MTD Target", "MTD Sipm", "Ach%", "YTD Target", "YTD Sipm", "Ach%", "YTD Net Ach", "MTD Dip Target", "MTD Dip", "Ach%", "YTD Dip Target", "YTD Dip", "Ach%", "Days Stock"];
+        : [firstColName, "MTD Target", "MTD Sipm", "Ach%", "YTD Target", "YTD Sipm", "Ach%", "YTD Net Ach", "MTD Dip Target", "MTD Dip", "Ach%", "YTD Dip Target", "YTD Dip", "Ach%", "Days Stock"];
 
       table.querySelector("thead").innerHTML = `<tr>${cols.map((c, i) => `<th class="${miniTableCellClass(c, i)}">${shortHeaderName(c)}</th>`).join("")}</tr>`;
 
@@ -4759,9 +4668,6 @@ function renderMiniPerformanceTable(tableId, rows, firstColName, mode = "regiona
         return `
           <tr>
             <td>${escapeHtml(r.name)}</td>
-            <td class="kpi-section-start">${formatNumber(r.Last_Day_Target)}</td>
-            <td>${formatNumber(r.Last_Day_Sales)}</td>
-            <td class="ach-cell ${achClass(r["Last Day Ach"])}">${formatPct(r["Last Day Ach"])}</td>
             <td class="kpi-section-start">${formatNumber(r.MTD_Target)}</td>
             <td>${formatNumber(r.MTD_Sales)}</td>
             <td class="ach-cell ${achClass(r["MTD Ach"])}">${formatPct(r["MTD Ach"])}</td>
