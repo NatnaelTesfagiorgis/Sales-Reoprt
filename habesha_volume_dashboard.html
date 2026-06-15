@@ -3121,6 +3121,31 @@
       }
     }
 
+  
+    /* Final ordering: Detailed Report last before Upload */
+    @media (max-width: 768px) {
+      .closed-month-grid {
+        margin-bottom: 18px !important;
+      }
+
+      .table-panel {
+        margin-top: 18px !important;
+        margin-bottom: 20px !important;
+      }
+
+      .table-panel .table-top h2::after {
+        content: " - Last section" !important;
+        font-size: 10px;
+        font-weight: 800;
+        color: #8a5f00;
+      }
+
+      .app-page-upload,
+      .bottom-upload-panel {
+        margin-top: 16px !important;
+      }
+    }
+
   </style>
 
 </head>
@@ -3276,21 +3301,7 @@
       </div>
     </section>
 
-    <section class="table-panel">
-      <div class="table-top">
-        <h2>Detailed Report</h2>
-        <div class="panel-header-actions">
-          <button class="export-btn" onclick="exportDetailedReportCsv()">Export CSV</button>
-          <input id="tableSearch" class="search" type="text" placeholder="Search agent / division..." />
-        </div>
-      </div>
-      <div class="table-wrap">
-        <table id="dataTable">
-          <thead></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
+    
 
     </section>
 
@@ -3356,6 +3367,22 @@
             <tbody></tbody>
           </table>
         </div>
+      </div>
+    </section>
+
+    <section class="table-panel">
+      <div class="table-top">
+        <h2>Detailed Report</h2>
+        <div class="panel-header-actions">
+          <button class="export-btn" onclick="exportDetailedReportCsv()">Export CSV</button>
+          <input id="tableSearch" class="search" type="text" placeholder="Search agent / division..." />
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="dataTable">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
       </div>
     </section>
 
