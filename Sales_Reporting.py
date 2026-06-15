@@ -2117,24 +2117,17 @@ for col in ["DV", "Division", "Region"]:
         depletion_dv_col = col
         break
 
-depletion_hl_col = None
-for col in ["Dep HL", "Depletion HL", "Depletion, HL", "Volume HL", "HL"]:
-    if col in depletion_work.columns:
-        depletion_hl_col = col
-        break
+# IMPORTANT:
+# Depletion source has the actual crate volume in "Dep.".
+# "Dep HL" exists in the sheet but may be blank, so it must NOT be selected first.
+# We force the code to use "Dep." as CRATES and only derive HL from crates.
+depletion_crates_col = find_col(
+    depletion_work,
+    ["Dep.", "Dep", "Depletion", "Depletion Crates", "Dep Crates", "Crates", "Quantity", "Qty", "Invoiced Quantity"],
+    "fact_ytd_depletion"
+)
 
-depletion_crates_col = None
-if depletion_hl_col is None:
-    for col in ["Depletion", "Depletion Crates", "Invoiced Quantity", "Quantity", "Qty", "Crates", "Dep.", "Dep Crates"]:
-        if col in depletion_work.columns:
-            depletion_crates_col = col
-            break
-
-if depletion_crates_col is None and depletion_hl_col is None:
-    raise KeyError(
-        "No depletion volume column found. "
-        f"Available depletion columns: {list(depletion_work.columns)}"
-    )
+depletion_hl_col = None  # kept only for compatibility; not used for current depletion volume
 
 depletion_work[depletion_date_col] = pd.to_datetime(depletion_work[depletion_date_col], errors="coerce", dayfirst=True)
 depletion_work = depletion_work[depletion_work[depletion_date_col].notna()].copy()
@@ -2155,12 +2148,17 @@ depletion_work = add_agent_division_fields(
     dv_col=depletion_dv_col
 )
 
-if depletion_hl_col is not None:
-    depletion_work["Depletion_HL"] = to_number(depletion_work[depletion_hl_col])
-    depletion_work["Depletion_Crates"] = depletion_work["Depletion_HL"] / HL_PER_CRATE
-else:
-    depletion_work["Depletion_Crates"] = to_number(depletion_work[depletion_crates_col])
-    depletion_work["Depletion_HL"] = depletion_work["Depletion_Crates"] * HL_PER_CRATE
+# "Dep." is already in CRATES.
+depletion_work["Depletion_Crates"] = to_number(depletion_work[depletion_crates_col]).fillna(0)
+depletion_work["Depletion_HL"] = depletion_work["Depletion_Crates"] * HL_PER_CRATE
+
+print("=" * 120)
+print("DEPLETION VOLUME SOURCE CHECK")
+print("=" * 120)
+print("Current/YTD depletion volume column used:", depletion_crates_col)
+print("Rule applied: Dep. is treated as CRATES; Dep HL is ignored for this calculation.")
+print("Current/YTD depletion crates total read:", f"{depletion_work['Depletion_Crates'].sum():,.0f}")
+print("Current/YTD depletion HL derived:", f"{depletion_work['Depletion_HL'].sum():,.3f}")
 
 depletion_product_brand_check = (
     depletion_work
@@ -2462,29 +2460,22 @@ for col in ["DV", "Division", "Region"]:
         py_depletion_dv_col = col
         break
 
-py_depletion_hl_col = None
-for col in ["Dep HL", "Depletion HL", "Depletion, HL", "Volume HL", "HL"]:
-    if col in py_depletion_work.columns:
-        py_depletion_hl_col = col
-        break
+# IMPORTANT:
+# Prefer "Dep." as CRATES for PY depletion as well, to keep current vs PY logic consistent.
+# Do not prioritize "Dep HL" because it may exist but be blank.
+py_depletion_crates_col = find_col(
+    py_depletion_work,
+    ["Dep.", "Dep", "Sales", "Depletion", "Depletion Crates", "Dep Crates", "Crates", "Quantity", "Qty", "Invoiced Quantity"],
+    "fact_py_depletion"
+)
 
-py_depletion_crates_col = None
-if py_depletion_hl_col is None:
-    for col in ["Sales", "Depletion", "Depletion Crates", "Invoiced Quantity", "Quantity", "Qty", "Crates", "Dep.", "Dep Crates"]:
-        if col in py_depletion_work.columns:
-            py_depletion_crates_col = col
-            break
-
-if py_depletion_crates_col is None and py_depletion_hl_col is None:
-    raise KeyError(
-        "No PY depletion volume column found. "
-        f"Available PY depletion columns: {list(py_depletion_work.columns)}"
-    )
+py_depletion_hl_col = None  # kept only for compatibility; not used for PY depletion volume
 
 print("=" * 120)
 print("PY DEPLETION COLUMN CHECK")
 print("=" * 120)
-print("PY depletion volume column used:", py_depletion_hl_col if py_depletion_hl_col is not None else py_depletion_crates_col)
+print("PY depletion volume column used:", py_depletion_crates_col)
+print("Rule applied: PY Dep. is treated as CRATES; PY Dep HL is ignored for this calculation.")
 
 py_depletion_work[py_depletion_date_col] = pd.to_datetime(
     py_depletion_work[py_depletion_date_col],
@@ -2506,12 +2497,12 @@ py_depletion_work = add_agent_division_fields(
     dv_col=py_depletion_dv_col
 )
 
-if py_depletion_hl_col is not None:
-    py_depletion_work["PY_Depletion_HL"] = to_number(py_depletion_work[py_depletion_hl_col])
-    py_depletion_work["PY_Depletion_Crates"] = py_depletion_work["PY_Depletion_HL"] / HL_PER_CRATE
-else:
-    py_depletion_work["PY_Depletion_Crates"] = to_number(py_depletion_work[py_depletion_crates_col])
-    py_depletion_work["PY_Depletion_HL"] = py_depletion_work["PY_Depletion_Crates"] * HL_PER_CRATE
+# PY depletion volume is already in CRATES.
+py_depletion_work["PY_Depletion_Crates"] = to_number(py_depletion_work[py_depletion_crates_col]).fillna(0)
+py_depletion_work["PY_Depletion_HL"] = py_depletion_work["PY_Depletion_Crates"] * HL_PER_CRATE
+
+print("PY depletion crates total read:", f"{py_depletion_work['PY_Depletion_Crates'].sum():,.0f}")
+print("PY depletion HL derived:", f"{py_depletion_work['PY_Depletion_HL'].sum():,.3f}")
 
 last_day_depletion_ab = period_metric(
     depletion_work,
