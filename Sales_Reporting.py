@@ -3106,6 +3106,11 @@ for col in [col for col in volume_cols_for_uom if col in final_kpi_hl.columns]:
 front_cols = ["Division", "Agent", "Brand", "UOM"]
 
 final_kpi_report = pd.concat([final_kpi_crates, final_kpi_hl], ignore_index=True)
+
+# Dashboard report date used on the Last Day Shipment card.
+final_kpi_report["Report_As_Of_Date"] = LAST_SHIPMENT_DATE.date().isoformat()
+
+front_cols = ["Report_As_Of_Date"] + front_cols
 final_kpi_report = final_kpi_report[[col for col in front_cols if col in final_kpi_report.columns] + [col for col in final_kpi_report.columns if col not in front_cols]].copy()
 
 print("=" * 120)
